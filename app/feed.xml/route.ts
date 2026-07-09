@@ -11,7 +11,7 @@ export async function GET() {
         <title><![CDATA[${sohbet.baslik}]]></title>
         <link>${baseUrl}/sohbet/${sohbet.slug}</link>
         <guid>${baseUrl}/sohbet/${sohbet.slug}</guid>
-        <pubDate>${new Date(sohbet.tarihIso).toUTCString()}</pubDate>
+        <pubDate>${new Date(sohbet.tarih).toUTCString()}</pubDate>
         <description><![CDATA[${sohbet.ozet || ''}]]></description>
       </item>
     `;

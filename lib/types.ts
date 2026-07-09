@@ -4,7 +4,6 @@
 // şemasına birebir uymuyor; dosyalar **Etiket:** biçiminde bir başlık bloğu
 // kullanıyor. Ayrıca bazı alanlar kaynakta HENÜZ YOK:
 //   - audio (ses URL'i)
-//   - sureDk (dinleme süresi)
 //   - bölüm timestamp'leri (bolumler[].ts)
 //   - yapılandırılmış ayet listesi (ayet metni prose olarak "Geçen Ayetler"de)
 // Bu alanlar opsiyonel bırakıldı; içerik zenginleşince doldurulabilir.

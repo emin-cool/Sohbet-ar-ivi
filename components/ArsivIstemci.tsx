@@ -1,8 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { ilerlemeHaritasi } from "@/lib/ilerleme";
+import { useMemo, useState } from "react";
 import type { SohbetMeta } from "@/lib/types";
 import SohbetListeKarti from "./SohbetListeKarti";
 
@@ -49,16 +48,6 @@ export default function ArsivIstemci({
 
   const [drawerAcik, setDrawerAcik] = useState(false);
   const [sureArama, setSureArama] = useState("");
-  const [progress, setProgress] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    const h = ilerlemeHaritasi();
-    const m: Record<string, number> = {};
-    for (const [slug, k] of Object.entries(h)) {
-      if (k.toplam > 0) m[slug] = k.saniye / k.toplam;
-    }
-    setProgress(m);
-  }, []);
 
   // --- URL güncelleme yardımcıları ---
   function setParam(name: string, values: string[]) {
@@ -278,7 +267,7 @@ export default function ArsivIstemci({
 
         <div className="space-y-4">
           {filtrelenmis.map((s) => (
-            <SohbetListeKarti key={s.slug} sohbet={s} oran={progress[s.slug]} />
+            <SohbetListeKarti key={s.slug} sohbet={s} />
           ))}
           {filtrelenmis.length === 0 && (
             <div className="rounded-card border border-line bg-surface p-10 text-center text-muted">

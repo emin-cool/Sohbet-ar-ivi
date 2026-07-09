@@ -156,7 +156,7 @@ function SohbetlerTab() {
 
   const handleDelete = async (filename: string) => {
     if (!confirm(`"${filename}" kalıcı olarak silinecek. Emin misiniz?`)) return;
-    await fetch(`/api/admin/sohbetler/${filename}`, { method: "DELETE" });
+    await fetch(`/api/admin/sohbetler/detay?filename=${filename}`, { method: "DELETE" });
     fetchFiles();
   };
 
@@ -207,14 +207,14 @@ function EditorModal({ filename, onClose }: { filename: string, onClose: () => v
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/admin/sohbetler/${filename}`)
+    fetch(`/api/admin/sohbetler/detay?filename=${filename}`)
       .then(r => r.json())
       .then(d => setContent(d.content || ""));
   }, [filename]);
 
   const handleSave = async () => {
     setSaving(true);
-    await fetch(`/api/admin/sohbetler/${filename}`, {
+    await fetch(`/api/admin/sohbetler/detay?filename=${filename}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content })

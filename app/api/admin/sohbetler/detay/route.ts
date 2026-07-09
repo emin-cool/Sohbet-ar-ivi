@@ -4,14 +4,14 @@ import path from "path";
 
 const SOHBET_DIR = path.join(process.cwd(), "content", "sohbetler");
 
-export async function GET(req: NextRequest, { params }: { params: { filename: string } }) {
+export async function GET(req: NextRequest) {
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Erişim engellendi" }, { status: 403 });
   }
 
-  const { filename } = params;
-  if (!filename.endsWith(".md")) {
-    return NextResponse.json({ error: "Sadece .md dosyaları okunabilir" }, { status: 400 });
+  const filename = req.nextUrl.searchParams.get("filename");
+  if (!filename || !filename.endsWith(".md")) {
+    return NextResponse.json({ error: "Geçerli bir .md dosyası belirtilmedi" }, { status: 400 });
   }
 
   const filePath = path.join(SOHBET_DIR, filename);
@@ -28,13 +28,13 @@ export async function GET(req: NextRequest, { params }: { params: { filename: st
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { filename: string } }) {
+export async function PUT(req: NextRequest) {
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Erişim engellendi" }, { status: 403 });
   }
 
-  const { filename } = params;
-  if (!filename.endsWith(".md")) {
+  const filename = req.nextUrl.searchParams.get("filename");
+  if (!filename || !filename.endsWith(".md")) {
     return NextResponse.json({ error: "Sadece .md dosyaları güncellenebilir" }, { status: 400 });
   }
 
@@ -54,13 +54,13 @@ export async function PUT(req: NextRequest, { params }: { params: { filename: st
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { filename: string } }) {
+export async function DELETE(req: NextRequest) {
   if (process.env.NODE_ENV !== "development") {
     return NextResponse.json({ error: "Erişim engellendi" }, { status: 403 });
   }
 
-  const { filename } = params;
-  if (!filename.endsWith(".md")) {
+  const filename = req.nextUrl.searchParams.get("filename");
+  if (!filename || !filename.endsWith(".md")) {
     return NextResponse.json({ error: "Geçersiz dosya formatı" }, { status: 400 });
   }
 

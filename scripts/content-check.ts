@@ -29,7 +29,7 @@ function main() {
     console.log(`• ${s.tarihTr.padEnd(18)} ${s.baslik}`);
     console.log(`    slug: ${s.slug}`);
     console.log(
-      `    kavram(eşleşen): ${s.kavramlar.length} · eşleşmeyen: ${s.eslesmeyenKavramlar.length} · vurgu: ${s.vurgular.length} · bölüm: ${s.bolumler.length} · ayet: ${s.ayetler.length} · ses: ${s.audio ? "var" : "yok"}`,
+      `    kavram(eşleşen): ${s.kavramlar.length} · eşleşmeyen: ${s.eslesmeyenKavramlar.length} · vurgu: ${s.vurgular.length} · bölüm: ${s.bolumler.length} · ayet: ${s.ayetler.length}`,
     );
     if (uyari.length) console.log(`    ⚠️  ${uyari.join(", ")}`);
   }

@@ -51,7 +51,7 @@ export default function SohbetDetay({ params }: { params: { slug: string } }) {
             {sohbet.baslik}
           </h1>
           <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
-            <time data-pagefind-filter={`Yıl:${sohbet.tarihIso.substring(0, 4)}`}>{sohbet.tarihTr}</time>
+            <time data-pagefind-filter={`Yıl:${sohbet.tarih.substring(0, 4)}`}>{sohbet.tarihTr}</time>
 
             {sohbet.kavramlar.length > 0 && (
               <>
