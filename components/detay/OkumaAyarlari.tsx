@@ -24,6 +24,7 @@ export default function OkumaAyarlari() {
   const [acik, setAcik] = useState(false);
   const [tema, setTema] = useState<Tema>("light");
   const [olcekIdx, setOlcekIdx] = useState(1);
+  const [odakModu, setOdakModu] = useState(false);
   const kutuRef = useRef<HTMLDivElement>(null);
 
   // Kayıtlı ayarları yükle
@@ -31,9 +32,22 @@ export default function OkumaAyarlari() {
     const t = (localStorage.getItem(TEMA_ANAHTAR) as Tema) || "light";
     const y = Number(localStorage.getItem(YAZI_ANAHTAR));
     const idx = OLCEKLER.indexOf(y);
+    const f = localStorage.getItem("sohbet-arsivi:odak") === "true";
     setTema(t);
+    setOdakModu(f);
     if (idx >= 0) setOlcekIdx(idx);
   }, []);
+
+  // Odak modunu dinle
+  useEffect(() => {
+    if (odakModu) {
+      document.body.dataset.focus = "true";
+      localStorage.setItem("sohbet-arsivi:odak", "true");
+    } else {
+      delete document.body.dataset.focus;
+      localStorage.setItem("sohbet-arsivi:odak", "false");
+    }
+  }, [odakModu]);
 
   // Dışarı tıklayınca kapat
   useEffect(() => {
@@ -117,6 +131,22 @@ export default function OkumaAyarlari() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="mt-4 border-t border-line pt-4">
+            <label className="flex cursor-pointer items-center justify-between">
+              <span className="text-sm font-medium text-ink">Odak Modu</span>
+              <div className="relative inline-flex items-center">
+                <input 
+                  type="checkbox" 
+                  className="peer sr-only" 
+                  checked={odakModu}
+                  onChange={(e) => setOdakModu(e.target.checked)}
+                />
+                <div className="h-5 w-9 rounded-full bg-line after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-accent peer-checked:after:translate-x-full"></div>
+              </div>
+            </label>
+            <p className="mt-1 text-xs text-muted">Dikkat dağıtıcı ögeleri gizler.</p>
           </div>
         </div>
       )}

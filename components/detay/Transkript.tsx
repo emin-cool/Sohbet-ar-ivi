@@ -2,6 +2,8 @@
 
 import { Fragment, useEffect, useState, useRef } from "react";
 import AyetTooltip from "./AyetTooltip";
+import KavramTooltip from "./KavramTooltip";
+import kavramlarData from "@/content/kavramlar.json";
 
 // Gövdeyi ## başlıklara göre bölümlere ayırır.
 function bolumlereAyir(govde: string): Array<{ baslik: string; metin: string }> {
@@ -19,6 +21,26 @@ function bolumlereAyir(govde: string): Array<{ baslik: string; metin: string }> 
 
 // Regex: Opsiyonel kelime + sayı + : veya / + sayı -> örn: Zümer 39:29, 39:29, Bakara 2/255
 const AYET_REGEX = /([A-Za-zÇĞİÖŞÜçğıöşü]+\s+\d+[:/]\d+|\b\d+[:/]\d+\b)/g;
+
+// Kavram Regex Hazırlığı
+const db = kavramlarData as Record<string, { ad: string; aliases: string[] }>;
+const aliasToSlug: Record<string, string> = {};
+const tumKelimeler: string[] = [];
+
+Object.entries(db).forEach(([slug, k]) => {
+  const kelimeler = [k.ad, ...k.aliases];
+  kelimeler.forEach(kelime => {
+    if (kelime) {
+      tumKelimeler.push(kelime.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      aliasToSlug[kelime.toLowerCase()] = slug;
+    }
+  });
+});
+tumKelimeler.sort((a, b) => b.length - a.length);
+
+const KAVRAM_REGEX = tumKelimeler.length > 0
+  ? new RegExp(`(?<=^|[\\s.,!?()"'])(${tumKelimeler.join("|")})(?=[\\s.,!?()"']|$)`, 'gi')
+  : null;
 
 function formatText(paragraf: string) {
   // Önce *vurgu* split yapıyoruz
@@ -38,7 +60,6 @@ function formatText(paragraf: string) {
       <Fragment key={i}>
         {ayetParcalar.map((ap, j) => {
           if (AYET_REGEX.test(ap)) {
-            // "Zümer 39:29" -> chapter = 39, verse = 29
             const match = ap.match(/(\d+)[:/](\d+)/);
             if (match) {
               const chapter = parseInt(match[1]);
@@ -50,6 +71,27 @@ function formatText(paragraf: string) {
               );
             }
           }
+          
+          // Ayet değilse, içinde kavram var mı bakıyoruz
+          if (KAVRAM_REGEX && ap.trim().length > 0) {
+            const kavramParcalar = ap.split(KAVRAM_REGEX);
+            return (
+              <Fragment key={j}>
+                {kavramParcalar.map((kp, k) => {
+                  const asLowerCase = kp.toLowerCase();
+                  if (aliasToSlug[asLowerCase]) {
+                    return (
+                      <KavramTooltip key={k} kavramSlug={aliasToSlug[asLowerCase]}>
+                        {kp}
+                      </KavramTooltip>
+                    );
+                  }
+                  return <Fragment key={k}>{kp}</Fragment>;
+                })}
+              </Fragment>
+            );
+          }
+          
           return <Fragment key={j}>{ap}</Fragment>;
         })}
       </Fragment>

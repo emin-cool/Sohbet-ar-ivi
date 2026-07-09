@@ -147,35 +147,41 @@ export default function SohbetDetay({ params }: { params: { slug: string } }) {
                 )}
               </div>
             )}
+            {/* Benzer Sohbetler (Sayfa Sonu) */}
+            {benzerler.length > 0 && (
+              <div className="mt-12 border-t border-line pt-10" data-pagefind-ignore>
+                <h2 className="mb-6 font-serif text-2xl font-bold text-ink">
+                  İlgili Sohbetler
+                </h2>
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {benzerler.map((b) => (
+                    <Link
+                      key={b.slug}
+                      href={`/sohbet/${b.slug}`}
+                      className="group flex flex-col justify-between rounded-card border border-line bg-surface p-5 transition-all hover:-translate-y-1 hover:border-accent hover:shadow-card-hover"
+                    >
+                      <div>
+                        <h3 className="font-serif text-lg font-semibold leading-snug text-ink transition-colors group-hover:text-accent line-clamp-2">
+                          {b.baslik}
+                        </h3>
+                        <p className="mt-2 text-sm leading-relaxed text-muted line-clamp-3">
+                          {b.ozet || "Kısa özet bulunmuyor..."}
+                        </p>
+                      </div>
+                      <div className="mt-4 text-xs font-medium text-muted">
+                        {b.tarihTr}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sağ: sticky sidebar */}
           <aside className="mt-10 lg:mt-0" data-pagefind-ignore>
             <div className="lg:sticky lg:top-20 space-y-8">
               <Icindekiler bolumler={sohbet.bolumler} />
-
-              {benzerler.length > 0 && (
-                <div className="rounded-card border border-line bg-surface p-5">
-                  <h2 className="mb-4 font-serif text-lg font-semibold text-ink">
-                    Benzer Sohbetler
-                  </h2>
-                  <ul className="space-y-4">
-                    {benzerler.map((b) => (
-                      <li key={b.slug} className="border-b border-line pb-4 last:border-0 last:pb-0">
-                        <Link
-                          href={`/sohbet/${b.slug}`}
-                          className="font-serif font-semibold text-ink transition-colors hover:text-accent"
-                        >
-                          {b.baslik}
-                        </Link>
-                        <p className="mt-1 text-sm text-muted">
-                          {b.tarihTr}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
           </aside>
         </div>

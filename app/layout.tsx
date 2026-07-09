@@ -38,7 +38,7 @@ export default function RootLayout({
         {/* Kayıtlı tema/yazı tercihini FOUC olmadan uygula (okuma ayarları). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('sohbet-arsivi:tema');if(t)document.documentElement.dataset.theme=t;var y=localStorage.getItem('sohbet-arsivi:yazi');if(y)document.documentElement.style.setProperty('--reading-scale',y);}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('sohbet-arsivi:tema');if(t)document.documentElement.dataset.theme=t;var y=localStorage.getItem('sohbet-arsivi:yazi');if(y)document.documentElement.style.setProperty('--reading-scale',y);var f=localStorage.getItem('sohbet-arsivi:odak');if(f==='true')document.body.dataset.focus='true';}catch(e){}`,
           }}
         />
       </head>

@@ -72,3 +72,56 @@ body {
 :root {
   --reading-scale: 1;
 }
+
+/* =========================================
+   ODAK MODU (Focus Mode)
+   ========================================= */
+body[data-focus="true"] header,
+body[data-focus="true"] footer,
+body[data-focus="true"] aside,
+body[data-focus="true"] nav[aria-label="Breadcrumb"],
+body[data-focus="true"] .focus-gizle {
+  display: none !important;
+}
+
+body[data-focus="true"] main {
+  padding-top: 2rem !important;
+  max-width: 800px;
+}
+
+/* =========================================
+   YAZDIRMA / PDF (Print Mode)
+   ========================================= */
+@media print {
+  /* Renkleri sıfırla, kağıt tasarrufuna git */
+  html, body {
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  /* Gereksiz menüleri ve UI öğelerini gizle */
+  header, footer, aside, nav, button, .focus-gizle, .print-gizle {
+    display: none !important;
+  }
+  
+  /* Sayfa boşluklarını yazıcıya uygun ayarla */
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+  }
+  
+  /* Linklerin altı çizili kalabilir ama renkleri siyah olsun */
+  a {
+    color: black !important;
+    text-decoration: none !important;
+  }
+  
+  /* Sayfa sonu kırılmalarını ayarla */
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+  section {
+    page-break-inside: auto;
+  }
+}

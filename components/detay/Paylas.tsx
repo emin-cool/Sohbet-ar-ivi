@@ -59,6 +59,15 @@ export default function Paylas({ baslik }: { baslik: string }) {
           >
             <LinkIcon /> {kopyalandi ? "Kopyalandı ✓" : "Linki kopyala"}
           </button>
+          
+          <div className="my-1 border-t border-line"></div>
+          
+          <button
+            onClick={() => window.print()}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-bg"
+          >
+            <PrintIcon /> PDF İndir / Yazdır
+          </button>
         </div>
       )}
     </div>
@@ -88,6 +97,15 @@ function LinkIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M9 15l6-6M10 6l1-1a4 4 0 0 1 6 6l-1 1M14 18l-1 1a4 4 0 0 1-6-6l1-1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PrintIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 14h12v8H6v-8z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
