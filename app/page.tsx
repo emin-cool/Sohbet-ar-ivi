@@ -15,11 +15,11 @@ export default function AnaSayfa() {
       {/* Hero */}
       <section className="py-16 text-center sm:py-20">
         <h1 className="mx-auto max-w-3xl font-serif text-4xl font-bold leading-tight text-ink sm:text-5xl">
-          Dijital Sığınağa Hoş Geldiniz
+          İsmail Acarkan Sohbet Kayıtları
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-muted">
-          Türkçe İslami sohbet kayıtları. Kavram, ayet ve konuya göre okuyun,
-          dinleyin.
+          Türkçe İslami sohbet kayıtları arşivi. Kavram, ayet ve konuya göre okuyun,
+          inceleyin.
         </p>
         <div className="mt-8">
           <HeroArama />
