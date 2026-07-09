@@ -1,0 +1,118 @@
+{
+  "sahte-benlik": {
+    "ad": "Sahte Benlik",
+    "aliases": [
+      "sahte benlik",
+      "sahte benlik (ego)",
+      "cahil benlik",
+      "tepkisel benlikler",
+      "büyülenme (sahte benlik algıları)",
+      "benliğin parçalanması",
+      "öykü/hikaye (sahte benlik)",
+      "kulağa üflenenler",
+      "izafi benlik",
+      "özdeşleşme",
+      "deneyim-kimlik yanılgısı",
+      "muhtaçlık yanılsaması"
+    ]
+  },
+  "gercek-kendilik": {
+    "ad": "Gerçek Kendilik",
+    "aliases": [
+      "gerçek kendilik",
+      "gerçek kendilik/varlık",
+      "sahte benlik / gerçek kendilik"
+    ]
+  },
+  "ruh": {
+    "ad": "Ruh (Allah'ın Üflemesi)",
+    "kisa_ad": "Ruh",
+    "aliases": [
+      "allah'ın üflediği ruh",
+      "allah'ın ruhundan üfleme (adem kıssası)",
+      "âdem'e ruh üflenmesi",
+      "ruh (allah'ın üflediği ruh)"
+    ]
+  },
+  "fitrat": {
+    "ad": "Fıtrat",
+    "aliases": ["fıtrat"]
+  },
+  "hasbiyallah": {
+    "ad": "Hasbiyallah",
+    "aliases": [
+      "hasbiyallah",
+      "hasbiyallah (allah bana yeter)",
+      "allah'ın kâfi olması"
+    ]
+  },
+  "kendini-hatirlamak": {
+    "ad": "Kendini Hatırlamak",
+    "aliases": ["kendini bilmek", "kendini hatırlamak", "allah'ı hatırlamak"]
+  },
+  "kufur": {
+    "ad": "Küfür (Hakikati Örtmek)",
+    "kisa_ad": "Küfür",
+    "aliases": [
+      "küfür/kâfir (kendi hakikatini örtmek)",
+      "imanın örtülmesi",
+      "kendini örten perdeler"
+    ]
+  },
+  "nefis": {
+    "ad": "Nefis",
+    "aliases": ["nefis", "nefs (kendilik)", "nefis tezkiyesi", "nefsi temizlemek"]
+  },
+  "marifetullah": {
+    "ad": "Marifetullah",
+    "aliases": ["marifetullah"]
+  },
+  "nefsine-zulmetmek": {
+    "ad": "Nefsine Zulmetmek",
+    "aliases": ["nefsine zulmetmek (hz. âdem)", "kendine zulmetmek"]
+  },
+  "enfusi-yorum": {
+    "ad": "Enfüsî (İçsel) Yorum",
+    "kisa_ad": "Enfüsî Yorum",
+    "aliases": ["afaki/enfüsi yorum", "kıssaların evrenselliği"]
+  },
+  "mutmain-kalp": {
+    "ad": "Mutmain Kalp",
+    "aliases": ["mutmain kalp", "kalpler ancak allah ile mutmain olur"]
+  },
+  "tevhid": {
+    "ad": "Tevhid",
+    "aliases": ["tevhid"]
+  },
+  "sabir": {
+    "ad": "Sabır",
+    "aliases": ["sabır"]
+  },
+  "sukur": {
+    "ad": "Şükür",
+    "aliases": ["şükür"]
+  },
+  "ihlas": {
+    "ad": "İhlas",
+    "aliases": ["ihlas"]
+  },
+  "riza": {
+    "ad": "Allah'tan Razı Olma (Rıza)",
+    "kisa_ad": "Rıza",
+    "aliases": ["allah'tan razı olma"]
+  },
+  "muhabbetullah": {
+    "ad": "Muhabbetullah",
+    "aliases": ["muhabbetullah"]
+  },
+  "sikayet": {
+    "ad": "Şikâyet (Ego Hastalığı)",
+    "kisa_ad": "Şikâyet",
+    "aliases": ["şikayet (ego hastalığı)"]
+  },
+  "nispet": {
+    "ad": "Nispet / İntisap",
+    "kisa_ad": "Nispet",
+    "aliases": ["nispet/intisap"]
+  }
+}

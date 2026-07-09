@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Tema token'ları. Değerler "R G B" biçiminde tutulur; Tailwind renkleri
+  rgb(var(--x) / <alpha>) ile bunları kullanır. Üç tema:
+  Açık (varsayılan) · Sepya · Koyu — okuma ayarlarından [data-theme] ile değişir.
+*/
+:root,
+[data-theme="light"] {
+  --bg: 250 247 242;          /* #FAF7F2 krem */
+  --surface: 255 253 248;     /* kartlarda hafif daha açık krem */
+  --ink: 31 41 55;            /* #1F2937 koyu mürekkep */
+  --muted: 107 114 128;       /* ikincil metin */
+  --accent: 15 118 110;       /* #0F766E teal */
+  --accent-strong: 12 96 90;  /* koyu teal (hover) */
+  --accent-soft: 224 238 235; /* vurgular bloğu / ilgili kavram chip zemini */
+  --accent-fg: 255 255 255;   /* teal üstü metin */
+  --line: 232 226 216;        /* ince ayraç çizgileri */
+  --chip: 239 231 218;        /* kavram etiketi zemini (bej) */
+  --chip-fg: 90 78 58;        /* kavram etiketi metni */
+  --badge: 224 231 246;       /* süre rozeti zemini */
+  --badge-fg: 55 65 81;       /* süre rozeti metni */
+}
+
+[data-theme="sepia"] {
+  --bg: 244 236 220;
+  --surface: 250 243 229;
+  --ink: 60 47 33;
+  --muted: 122 104 82;
+  --accent: 22 101 79;
+  --accent-strong: 16 78 61;
+  --accent-soft: 226 234 224;
+  --accent-fg: 250 243 229;
+  --line: 223 209 184;
+  --chip: 229 216 194;
+  --chip-fg: 96 78 55;
+  --badge: 230 219 197;
+  --badge-fg: 82 66 47;
+}
+
+[data-theme="dark"] {
+  --bg: 24 27 32;
+  --surface: 32 36 43;
+  --ink: 226 230 235;
+  --muted: 148 156 168;
+  --accent: 45 168 156;
+  --accent-strong: 78 195 183;
+  --accent-soft: 34 55 52;
+  --accent-fg: 12 20 19;
+  --line: 52 58 68;
+  --chip: 52 50 44;
+  --chip-fg: 210 198 176;
+  --badge: 45 52 66;
+  --badge-fg: 190 200 214;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--ink));
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Okuma ayarlarındaki A- / A+ yazı boyutu ölçeği için kanca (detay sayfasında kullanılacak) */
+:root {
+  --reading-scale: 1;
+}
