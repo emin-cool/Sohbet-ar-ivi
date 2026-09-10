@@ -7,33 +7,37 @@ import Icindekiler from "@/components/detay/Icindekiler";
 import OkumaAyarlari from "@/components/detay/OkumaAyarlari";
 import Paylas from "@/components/detay/Paylas";
 import Transkript from "@/components/detay/Transkript";
+import SohbetEditButton from "@/components/admin/SohbetEditButton";
+import ProgressTracker from "@/components/ProgressTracker";
 import {
   getBenzerSohbetler,
   getSohbet,
   getSohbetSluglari,
 } from "@/lib/content";
 
-export function generateStaticParams() {
-  return getSohbetSluglari().map((slug) => ({ slug }));
+export async function generateStaticParams() {
+  return (await getSohbetSluglari()).map((slug) => ({ slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Metadata {
-  const s = getSohbet(params.slug);
+}): Promise<Metadata> {
+  const s = await getSohbet(params.slug);
   if (!s) return {};
   return { title: s.baslik, description: s.ozet };
 }
 
-export default function SohbetDetay({ params }: { params: { slug: string } }) {
-  const sohbet = getSohbet(params.slug);
+export default async function SohbetDetay({ params }: { params: { slug: string } }) {
+  const sohbet = await getSohbet(params.slug);
   if (!sohbet) notFound();
-  const benzerler = getBenzerSohbetler(sohbet.slug, 3);
+  const benzerler = await getBenzerSohbetler(sohbet.slug, 3);
 
   return (
-    <Fragment>
+    <>
+      <ProgressTracker slug={sohbet.slug} />
+      <SohbetEditButton slug={sohbet.slug} />
       <main className="mx-auto max-w-site px-6 py-8" data-pagefind-body>
 
         {/* Breadcrumb */}
@@ -51,8 +55,6 @@ export default function SohbetDetay({ params }: { params: { slug: string } }) {
             {sohbet.baslik}
           </h1>
           <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
-            <time data-pagefind-filter={`Yıl:${sohbet.tarih.substring(0, 4)}`}>{sohbet.tarihTr}</time>
-
             {sohbet.kavramlar.length > 0 && (
               <>
                 <span aria-hidden="true">·</span>
@@ -168,9 +170,6 @@ export default function SohbetDetay({ params }: { params: { slug: string } }) {
                           {b.ozet || "Kısa özet bulunmuyor..."}
                         </p>
                       </div>
-                      <div className="mt-4 text-xs font-medium text-muted">
-                        {b.tarihTr}
-                      </div>
                     </Link>
                   ))}
                 </div>
@@ -186,7 +185,7 @@ export default function SohbetDetay({ params }: { params: { slug: string } }) {
           </aside>
         </div>
       </main>
-    </Fragment>
+    </>
   );
 }
 

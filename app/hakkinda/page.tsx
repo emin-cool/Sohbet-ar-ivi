@@ -5,12 +5,12 @@ import { getKavramlar, getSohbetMetalar } from "@/lib/content";
 export const metadata: Metadata = {
   title: "Hakkında",
   description:
-    "Sohbet Arşivi hakkında: içerik, kavram ve ayet indeksinin nasıl oluşturulduğu.",
+    "Pazartesi Sohbetleri hakkında: içerik, kavram ve ayet indeksinin nasıl oluşturulduğu.",
 };
 
-export default function HakkindaSayfasi() {
-  const sohbetSayisi = getSohbetMetalar().length;
-  const kavramSayisi = getKavramlar().length;
+export default async function HakkindaSayfasi() {
+  const sohbetSayisi = (await getSohbetMetalar()).length;
+  const kavramSayisi = (await getKavramlar()).length;
 
   return (
     <main className="mx-auto max-w-reading px-6 py-14">
@@ -20,7 +20,7 @@ export default function HakkindaSayfasi() {
 
       <div className="mt-8 space-y-5 leading-[1.8] text-ink/90">
         <p>
-          <strong>Sohbet Arşivi</strong>, Türkçe İslami sohbet kayıtlarını okuma
+          <strong>Pazartesi Sohbetleri</strong>, Türkçe İslami sohbet kayıtlarını okuma
           ve dinleme için bir araya getiren bir arşivdir. Amaç, sohbetleri
           konuya, kavrama ve geçen ayetlere göre kolayca keşfedilebilir kılmak;
           hem okunabilir bir transkript hem de eşlik eden ses kaydını aynı yerde
@@ -41,7 +41,7 @@ export default function HakkindaSayfasi() {
             <Link href="/sohbetler" className="text-accent hover:underline">
               Sohbetler
             </Link>{" "}
-            sayfasından kavram, tarih ve sureye göre filtreleyebilirsiniz.
+            sayfasından kavram ve sureye göre filtreleyebilirsiniz.
           </li>
           <li>
             <Link href="/kavramlar" className="text-accent hover:underline">
@@ -54,7 +54,7 @@ export default function HakkindaSayfasi() {
             <Link href="/ayetler" className="text-accent hover:underline">
               Ayet İndeksi
             </Link>{" "}
-            sohbetlerde geçen sure ve ayetleri Kur'an sırasına göre listeler.
+            sohbetlerde geçen sure ve ayetleri Kur&apos;an sırasına göre listeler.
           </li>
           <li>
             <Link href="/rastgele" className="text-accent hover:underline">

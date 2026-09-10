@@ -12,21 +12,21 @@ import {
   getTumSohbetler,
 } from "../lib/content";
 
-function main() {
-  const sohbetler = getTumSohbetler();
+async function main() {
+  const sohbetler = await getTumSohbetler();
   console.log(`\n📚 ${sohbetler.length} sohbet ayrıştırıldı\n`);
 
   for (const s of sohbetler) {
     const uyari: string[] = [];
     if (!s.baslik) uyari.push("başlık yok");
-    if (!s.tarih) uyari.push("tarih yok");
+
     if (!s.konu) uyari.push("konu yok");
     if (!s.ozet) uyari.push("özet yok");
     if (s.kavramlar.length === 0) uyari.push("kavram yok");
     if (s.vurgular.length === 0) uyari.push("vurgu yok");
     if (s.bolumler.length === 0) uyari.push("bölüm yok");
 
-    console.log(`• ${s.tarihTr.padEnd(18)} ${s.baslik}`);
+    console.log(`• ${s.baslik}`);
     console.log(`    slug: ${s.slug}`);
     console.log(
       `    kavram(eşleşen): ${s.kavramlar.length} · eşleşmeyen: ${s.eslesmeyenKavramlar.length} · vurgu: ${s.vurgular.length} · bölüm: ${s.bolumler.length} · ayet: ${s.ayetler.length}`,
@@ -34,13 +34,13 @@ function main() {
     if (uyari.length) console.log(`    ⚠️  ${uyari.join(", ")}`);
   }
 
-  const kavramlar = getKavramlar();
+  const kavramlar = await getKavramlar();
   console.log(`\n🏷️  ${kavramlar.length} ana kavram (küratörlü):`);
   for (const k of kavramlar) {
     console.log(`    ${k.ad} (${k.adet})  [${k.slug}]`);
   }
 
-  const ayetIndeksi = getAyetIndeksi();
+  const ayetIndeksi = await getAyetIndeksi();
   console.log(
     `\n📖 Ayet indeksi: ${ayetIndeksi.length} sure, ${ayetIndeksi.reduce(
       (a, g) => a + g.ayetler.length,

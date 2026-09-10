@@ -10,18 +10,17 @@ import {
 
 export const metadata: Metadata = {
   title: "Tüm Sohbetler",
-  description: "Kavram, tarih ve sureye göre filtreleyerek sohbetleri keşfedin.",
+  description: "Kavram ve sureye göre filtreleyerek sohbetleri keşfedin.",
 };
 
-export default function SohbetlerSayfasi() {
-  const sohbetler = getSohbetMetalar();
-  const kavramFacet = getKavramlar().map(({ slug, kisaAd, adet }) => ({
+export default async function SohbetlerSayfasi() {
+  const sohbetler = await getSohbetMetalar();
+  const kavramFacet = (await getKavramlar()).map(({ slug, kisaAd, adet }) => ({
     slug,
     kisaAd,
     adet,
   }));
-  const yilFacet = getYilFacet();
-  const sureFacet = getSureFacet();
+  const sureFacet = await getSureFacet();
 
   return (
     <main className="mx-auto max-w-site px-6 py-12">
@@ -36,7 +35,6 @@ export default function SohbetlerSayfasi() {
         <ArsivIstemci
           sohbetler={sohbetler}
           kavramFacet={kavramFacet}
-          yilFacet={yilFacet}
           sureFacet={sureFacet}
         />
       </Suspense>

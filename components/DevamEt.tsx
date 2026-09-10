@@ -15,11 +15,12 @@ interface BookmarkData {
   sohbetBaslik?: string;
 }
 
-// "KALDIĞIN YERDEN DEVAM ET" — localStorage'da kayıt varsa render edilir.
-export default function DevamEt({ sohbetler }: { sohbetler: DevamSohbet[] }) {
-  const [durum, setDurum] = useState<BookmarkData | null>(null);
+// "KALDIĞIN YERDEN DEVAM ET" — veritabanı kaydı veya localStorage'da kayıt varsa render edilir.
+export default function DevamEt({ sohbetler, dbDevamEt }: { sohbetler: DevamSohbet[], dbDevamEt?: BookmarkData | null }) {
+  const [durum, setDurum] = useState<BookmarkData | null>(dbDevamEt || null);
 
   useEffect(() => {
+    if (dbDevamEt) return; // DB verisi varsa localStorage'a bakmaya gerek yok
     try {
       const raw = localStorage.getItem("bookmark");
       if (!raw) return;
@@ -30,7 +31,7 @@ export default function DevamEt({ sohbetler }: { sohbetler: DevamSohbet[] }) {
     } catch (e) {
       console.error(e);
     }
-  }, [sohbetler]);
+  }, [sohbetler, dbDevamEt]);
 
   if (!durum) return null;
 

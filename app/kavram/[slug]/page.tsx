@@ -2,18 +2,20 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import KavramChip from "@/components/KavramChip";
 import KavramSohbetSatiri from "@/components/KavramSohbetSatiri";
+import KavramEditButton from "@/components/admin/KavramEditButton";
 import { getKavram, getKavramlar } from "@/lib/content";
+import { Fragment } from "react";
 
-export function generateStaticParams() {
-  return getKavramlar().map((k) => ({ slug: k.slug }));
+export async function generateStaticParams() {
+  return (await getKavramlar()).map((k) => ({ slug: k.slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
   params: { slug: string };
-}): Metadata {
-  const k = getKavram(params.slug);
+}): Promise<Metadata> {
+  const k = await getKavram(params.slug);
   if (!k) return {};
   return {
     title: k.ad,
@@ -21,20 +23,22 @@ export function generateMetadata({
   };
 }
 
-export default function KavramSayfasi({
+export default async function KavramSayfasi({
   params,
 }: {
   params: { slug: string };
 }) {
-  const kavram = getKavram(params.slug);
+  const kavram = await getKavram(params.slug);
   if (!kavram) notFound();
 
   // Kronolojik (yeniden eskiye) — getKavram zaten tarihe göre sıralı döndürür.
   const sohbetler = kavram.sohbetler;
 
   return (
-    <main className="mx-auto max-w-site px-6 py-12">
-      <header>
+    <>
+      <KavramEditButton />
+      <main className="mx-auto max-w-site px-6 py-12">
+        <header>
         <p className="text-sm font-semibold uppercase tracking-wider text-muted">
           Kavram
         </p>
@@ -64,12 +68,13 @@ export default function KavramSayfasi({
           </h2>
           <span className="text-sm text-muted">Kronolojik</span>
         </div>
-        <div>
+        <div className="mt-4 flex flex-col gap-4">
           {sohbetler.map((s) => (
             <KavramSohbetSatiri key={s.slug} sohbet={s} />
           ))}
         </div>
       </section>
-    </main>
+      </main>
+    </>
   );
 }

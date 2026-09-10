@@ -1,409 +1,358 @@
-import fs from "node:fs";
-import path from "node:path";
-import { isoToTr, isoToYil } from "./dates";
-import { slugify } from "./slugify";
-import type { AyetRef, Bolum, Kavram, Sohbet, SohbetMeta } from "./types";
+import { prisma } from './prisma';
+import type { AyetRef, Bolum, Kavram, Sohbet, SohbetMeta } from './types';
 
-const SOHBET_DIR = path.join(process.cwd(), "content", "sohbetler");
-const KAVRAM_MAP_PATH = path.join(process.cwd(), "content", "kavramlar.json");
+// In-memory cache variable for development reloads or production module caching
+let cachedSohbetler: Sohbet[] | null = null;
 
-
-// ---------------------------------------------------------------------------
-// Başlık bloğu ayrıştırma (**Etiket:** biçimi)
-// ---------------------------------------------------------------------------
-
-/** Header bölgesinden tek bir **Etiket:** değerini çeker (sonraki etikete kadar). */
-function etiketDegeri(header: string, etiket: string): string {
-  // Bir sonraki **...:** etiketine ya da bölge sonuna kadar yakala.
-  const re = new RegExp(
-    `\\*\\*${etiket}:\\*\\*([\\s\\S]*?)(?=\\n\\*\\*[^\\n]+?:\\*\\*|$)`,
-  );
-  const m = re.exec(header);
-  return m ? m[1].trim() : "";
-}
-
-/** "Öne Çıkan Vurgular" bloğundaki "- " maddelerini toplar. */
-function vurgulariAyikla(header: string): string[] {
-  const blok = etiketDegeri(header, "Öne Çıkan Vurgular");
-  return blok
-    .split("\n")
-    .map((s) => s.trim())
-    .filter((s) => s.startsWith("- "))
-    .map((s) => s.slice(2).trim())
-    .filter(Boolean);
+/**
+ * Normalizes a Turkish label for matching aliases and finding canonical Kavram names.
+ */
+export function normalizeTrLabel(s: string): string {
+    return s
+        .replace(/İ/g, 'i')
+        .replace(/I/g, 'ı')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\.$/, '');
 }
 
 /**
- * Türkçe-uyumlu etiket normalizasyonu (alias eşleşmesi için).
- * İ->i, I->ı (Türkçe küçültme), ardından standart toLowerCase (ş,ç,ğ,ö,ü),
- * boşluk sadeleştirme ve sondaki nokta temizliği.
+ * Extracts AyetRef references from text (e.g. ayetlerNotu).
+ * Preserved from original implementation as requested.
  */
-function normalizeTrLabel(s: string): string {
-  return s
-    .replace(/İ/g, "i")
-    .replace(/I/g, "ı")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\.$/, "");
+export function ayetleriAyikla(notu: string): AyetRef[] {
+    const refler: AyetRef[] = [];
+    const gorulen = new Set<string>();
+    const re = /([A-ZÂÎÛÇĞİÖŞÜ][\wÂÎÛçğıöşüâîû\u2018\u2019.-]*(?:\s+[A-Za-zÂÎÛÇĞİÖŞÜçğıöşüâîû\u2018\u2019.-]+){0,2}?)\s*(?:Suresi\s*)?(\d{1,3}):(\d{1,3})/g;
+    
+    let match;
+    while ((match = re.exec(notu)) !== null) {
+        const sure = match[1].trim();
+        const sureNo = parseInt(match[2], 10);
+        const ayet = match[3];
+        const key = `${sureNo}:${ayet}`;
+        
+        if (!gorulen.has(key)) {
+            gorulen.add(key);
+            refler.push({ sure, sureNo, ayet });
+        }
+    }
+    return refler;
 }
 
 /**
- * Virgülle ayrılmış serbest kavram listesini küratörlü ana kavramlara çözer.
- * Her ham token normalize edilip alias indeksinde aranır. Eşleşenler ana kavrama
- * bağlanır (slug'a göre tekilleştirilir). Eşleşmeyen token'lar ayrıca döndürülür;
- * saklanır ama sitede gösterilmez.
+ * Internal function to fetch and cache data from Prisma.
  */
-function kavramlariAyikla(header: string): {
-  kavramlar: Kavram[];
-  eslesmeyen: string[];
-} {
-  const ham = etiketDegeri(header, "Kavramlar");
-  if (!ham) return { kavramlar: [], eslesmeyen: [] };
-
-  const index = aliasIndex();
-  const gorunen = new Set<string>(); // slug (sıra korunur)
-  const eslesmeyen: string[] = [];
-
-  for (const parca of ham.split(",")) {
-    const token = parca.trim();
-    if (!token) continue;
-    const slug = index[normalizeTrLabel(token)];
-    if (slug) {
-      gorunen.add(slug); // Set tekilleştirir
-    } else {
-      eslesmeyen.push(token);
+async function getAllData(): Promise<{ sohbetler: Sohbet[] }> {
+    if (cachedSohbetler) {
+        return { sohbetler: cachedSohbetler };
     }
-  }
 
-  return {
-    kavramlar: [...gorunen].map(kavramNesne),
-    eslesmeyen,
-  };
-}
+    const [dbSohbetler, dbKavramlar] = await Promise.all([
+        prisma.sohbetRecord.findMany({
+            orderBy: { createdAt: 'desc' }
+        }),
+        prisma.kavramRecord.findMany()
+    ]);
 
-/** Gövdedeki ## başlıklarını bölüm listesine çevirir (ts kaynakta yok). */
-function bolumleriAyikla(govde: string): Bolum[] {
-  const bolumler: Bolum[] = [];
-  const re = /^##\s+(.+?)\s*$/gm;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(govde)) !== null) {
-    bolumler.push({ baslik: m[1].trim() });
-  }
-  return bolumler;
-}
-
-/**
- * "Geçen Ayetler" ham metninden en iyi çaba ile yapılandırılmış referans çıkarır.
- * Örn. "Zümer 39:29", "Yusuf Suresi 12:86". Kaynakta bunlar çoğunlukla editör
- * tahmini olduğundan sonuç kesin değildir; UI'da temkinli sunulmalıdır.
- */
-function ayetleriAyikla(notu: string): AyetRef[] {
-  const refler: AyetRef[] = [];
-  const gorulen = new Set<string>();
-  const re =
-    /([A-ZÂÎÛÇĞİÖŞÜ][\wÂÎÛçğıöşüâîû'’.-]*(?:\s+[A-Za-zÂÎÛÇĞİÖŞÜçğıöşüâîû'’.-]+){0,2}?)\s*(?:Suresi\s*)?(\d{1,3}):(\d{1,3})/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(notu)) !== null) {
-    const sure = m[1].replace(/\s+Suresi$/i, "").trim();
-    const sureNo = Number(m[2]);
-    const ayet = m[3];
-    const key = `${sureNo}:${ayet}`;
-    if (gorulen.has(key)) continue;
-    gorulen.add(key);
-    refler.push({ sure, sureNo, ayet });
-  }
-  return refler;
-}
-
-// ---------------------------------------------------------------------------
-// Kavram görünen-ad eşlemesi (opsiyonel override: content/kavramlar.json)
-// ---------------------------------------------------------------------------
-
-interface KavramTanim {
-  ad: string;
-  kisa_ad?: string;
-  aliases: string[];
-}
-
-let _kavramTanimlar: Record<string, KavramTanim> | null = null;
-function kavramTanimlar(): Record<string, KavramTanim> {
-  if (_kavramTanimlar) return _kavramTanimlar;
-  try {
-    const raw = fs.readFileSync(KAVRAM_MAP_PATH, "utf8");
-    _kavramTanimlar = JSON.parse(raw) as Record<string, KavramTanim>;
-  } catch {
-    _kavramTanimlar = {};
-  }
-  return _kavramTanimlar;
-}
-
-let _kavramAdMap: Record<string, string> | null = null;
-/** slug -> görünen ad */
-function kavramAdMap(): Record<string, string> {
-  if (_kavramAdMap) return _kavramAdMap;
-  _kavramAdMap = Object.fromEntries(
-    Object.entries(kavramTanimlar()).map(([slug, t]) => [slug, t.ad]),
-  );
-  return _kavramAdMap;
-}
-
-/** slug -> Kavram nesnesi (ad + kisaAd). */
-function kavramNesne(slug: string): Kavram {
-  const t = kavramTanimlar()[slug];
-  const ad = t?.ad ?? slug;
-  return { slug, ad, kisaAd: t?.kisa_ad ?? ad };
-}
-
-let _aliasIndex: Record<string, string> | null = null;
-/** normalize edilmiş alias -> ana kavram slug'ı */
-function aliasIndex(): Record<string, string> {
-  if (_aliasIndex) return _aliasIndex;
-  const idx: Record<string, string> = {};
-  for (const [slug, t] of Object.entries(kavramTanimlar())) {
-    for (const alias of t.aliases) {
-      idx[normalizeTrLabel(alias)] = slug;
+    // Build alias index from Kavram records
+    const aliasIndex = new Map<string, Kavram>();
+    
+    for (const k of dbKavramlar) {
+        const kavramObj: Kavram = { 
+            slug: k.slug, 
+            ad: k.ad, 
+            kisaAd: k.kisaAd || k.ad 
+        };
+        
+        aliasIndex.set(normalizeTrLabel(k.ad), kavramObj);
+        if (k.kisaAd) {
+            aliasIndex.set(normalizeTrLabel(k.kisaAd), kavramObj);
+        }
+        
+        if (k.aliases) {
+            let aliasesArr: string[] = [];
+            try {
+                aliasesArr = JSON.parse(k.aliases);
+            } catch (e) {
+                // Ignore parse errors for aliases
+            }
+            
+            for (const alias of aliasesArr) {
+                aliasIndex.set(normalizeTrLabel(alias), kavramObj);
+            }
+        }
     }
-  }
-  _aliasIndex = idx;
-  return _aliasIndex;
+
+    // Process sohbet records and map to application types
+    const sohbetler: Sohbet[] = dbSohbetler.map(row => {
+        let vurgular: string[] = [];
+        try { vurgular = JSON.parse(row.vurgularJson || '[]'); } catch(e) {}
+        
+        let ayetler: AyetRef[] = [];
+        try { ayetler = JSON.parse(row.ayetlerJson || '[]'); } catch(e) {}
+        
+        if (ayetler.length === 0 && row.ayetlerNotu) {
+            ayetler = ayetleriAyikla(row.ayetlerNotu);
+        }
+        
+        let bolumler: Bolum[] = [];
+        try { bolumler = JSON.parse(row.bolumlerJson || '[]'); } catch(e) {}
+
+        const rowKavramlarRaw = row.kavramlarRaw 
+            ? row.kavramlarRaw.split(',').map((s: string) => s.trim()).filter(Boolean) 
+            : [];
+            
+        const resolvedKavramlar: Kavram[] = [];
+        const eslesmeyenKavramlar: string[] = [];
+        
+        for (const k of rowKavramlarRaw) {
+            const norm = normalizeTrLabel(k);
+            const match = aliasIndex.get(norm);
+            if (match) {
+                if (!resolvedKavramlar.some(rk => rk.slug === match.slug)) {
+                    resolvedKavramlar.push(match);
+                }
+            } else {
+                eslesmeyenKavramlar.push(k);
+            }
+        }
+
+        const sureNolari = Array.from(new Set(
+            ayetler.map(a => a.sureNo).filter((n): n is number => n !== undefined)
+        ));
+
+        return {
+            slug: row.slug,
+            dosya: row.dosyaAdi,
+            baslik: row.baslik,
+            konu: row.konu || '',
+            ozet: row.ozet || '',
+            kavramlar: resolvedKavramlar,
+            kavramSluglari: resolvedKavramlar.map(k => k.slug),
+            sureNolari: sureNolari,
+            eslesmeyenKavramlar,
+            vurgular,
+            ayetlerNotu: row.ayetlerNotu || '',
+            ayetler,
+            bolumler,
+            govde: row.govde || ''
+        };
+    });
+
+    cachedSohbetler = sohbetler;
+    return { sohbetler };
 }
 
-// ---------------------------------------------------------------------------
-// Tek dosya ayrıştırma
-// ---------------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// PUBLIC API FUNCTIONS
+// ----------------------------------------------------------------------
 
-function dosyaAdiCoz(dosya: string): { tarih: string; baslik: string; slug: string } {
-  const ad = dosya.replace(/\.md$/i, "");
-  const m = /^(\d{4}-\d{2}-\d{2})\s*-\s*(.+)$/.exec(ad);
-  if (m) {
-    const baslik = m[2].trim();
-    return { tarih: m[1], baslik, slug: slugify(baslik) };
-  }
-  // Dosya adı beklenen biçimde değilse geri düş.
-  return { tarih: "", baslik: ad, slug: slugify(ad) };
+export async function getTumSohbetler(): Promise<Sohbet[]> {
+    const { sohbetler } = await getAllData();
+    return sohbetler;
 }
 
-function ayristir(dosya: string): Sohbet {
-  const tamYol = path.join(SOHBET_DIR, dosya);
-  const icerik = fs.readFileSync(tamYol, "utf8");
-  const { tarih, baslik, slug } = dosyaAdiCoz(dosya);
-
-  // Gövde: ilk "## " başlığından itibaren. Öncesi başlık bloğudur.
-  const bolumIndex = icerik.search(/^##\s+/m);
-  const header = bolumIndex === -1 ? icerik : icerik.slice(0, bolumIndex);
-  const govde = bolumIndex === -1 ? "" : icerik.slice(bolumIndex).trim();
-
-  const { kavramlar, eslesmeyen: eslesmeyenKavramlar } =
-    kavramlariAyikla(header);
-  const ayetler = ayetleriAyikla(etiketDegeri(header, "Geçen Ayetler"));
-
-  const bolumler = bolumleriAyikla(govde);
-
-  return {
-    slug,
-    dosya,
-    baslik,
-    tarih,
-    tarihTr: tarih ? isoToTr(tarih) : "",
-    yil: tarih ? isoToYil(tarih) : 0,
-    konu: etiketDegeri(header, "Konu"),
-    ozet: etiketDegeri(header, "Kısa Özet"),
-    kavramlar,
-    kavramSluglari: kavramlar.map((k) => k.slug),
-    sureNolari: [
-      ...new Set(
-        ayetler
-          .map((a) => a.sureNo)
-          .filter((n): n is number => n != null),
-      ),
-    ],
-    eslesmeyenKavramlar,
-    vurgular: vurgulariAyikla(header),
-    ayetlerNotu: etiketDegeri(header, "Geçen Ayetler"),
-    ayetler,
-    bolumler,
-    govde,
-  };
+export async function getSohbetMetalar(): Promise<SohbetMeta[]> {
+    const sohbetler = await getTumSohbetler();
+    return sohbetler.map(s => ({
+        slug: s.slug,
+        dosya: s.dosya,
+        baslik: s.baslik,
+        konu: s.konu,
+        ozet: s.ozet,
+        kavramlar: s.kavramlar,
+        kavramSluglari: s.kavramSluglari,
+        sureNolari: s.sureNolari
+    }));
 }
 
-// ---------------------------------------------------------------------------
-// Genel erişim (build sırasında çağrılır; basit bellek-içi cache)
-// ---------------------------------------------------------------------------
-
-let _hepsi: Sohbet[] | null = null;
-
-/** Tüm sohbetler, tarihe göre yeniden eskiye sıralı. */
-export function getTumSohbetler(): Sohbet[] {
-  if (_hepsi) return _hepsi;
-  const dosyalar = fs
-    .readdirSync(SOHBET_DIR)
-    .filter((f) => f.toLowerCase().endsWith(".md"));
-  _hepsi = dosyalar
-    .map(ayristir)
-    .sort((a, b) => (a.tarih < b.tarih ? 1 : a.tarih > b.tarih ? -1 : 0));
-  return _hepsi;
+export async function getSohbet(slug: string): Promise<Sohbet | undefined> {
+    const sohbetler = await getTumSohbetler();
+    return sohbetler.find(s => s.slug === slug);
 }
 
-/** Listeleme için hafif meta (gövde içermez). */
-export function getSohbetMetalar(): SohbetMeta[] {
-  return getTumSohbetler().map(
-    ({ vurgular, ayetler, ayetlerNotu, bolumler, govde, eslesmeyenKavramlar, ...meta }) => meta,
-  );
+export async function getSohbetSluglari(): Promise<string[]> {
+    const sohbetler = await getTumSohbetler();
+    return sohbetler.map(s => s.slug);
 }
 
-export function getSohbet(slug: string): Sohbet | undefined {
-  return getTumSohbetler().find((s) => s.slug === slug);
-}
-
-export function getSohbetSluglari(): string[] {
-  return getTumSohbetler().map((s) => s.slug);
-}
-
-/** Tüm kavramlar, sohbet adediyle, çoktan aza sıralı. */
-export function getKavramlar(): Array<Kavram & { adet: number }> {
-  const say = new Map<string, number>();
-  for (const s of getTumSohbetler()) {
-    for (const k of s.kavramlar) {
-      say.set(k.slug, (say.get(k.slug) ?? 0) + 1);
+export async function getKavramlar(): Promise<Array<Kavram & { adet: number }>> {
+    const sohbetler = await getTumSohbetler();
+    const map = new Map<string, Kavram & { adet: number }>();
+    
+    for (const sohbet of sohbetler) {
+        for (const k of sohbet.kavramlar) {
+            const mevcut = map.get(k.slug);
+            if (mevcut) {
+                mevcut.adet++;
+            } else {
+                map.set(k.slug, { ...k, adet: 1 });
+            }
+        }
     }
-  }
-  return [...say]
-    .map(([slug, adet]) => ({ ...kavramNesne(slug), adet }))
-    .sort((a, b) => b.adet - a.adet || a.ad.localeCompare(b.ad, "tr"));
-}
-
-/** Tek kavram sayfası verisi: birlikte geçme sıklığına göre ilgili kavramlar + sohbetler. */
-export function getKavram(slug: string):
-  | (Kavram & {
-      adet: number;
-      ilgili: Array<Kavram & { adet: number }>;
-      sohbetler: SohbetMeta[];
-    })
-  | undefined {
-  const sohbetler = getTumSohbetler().filter((s) =>
-    s.kavramSluglari.includes(slug),
-  );
-  if (sohbetler.length === 0) return undefined;
-
-  // Birlikte geçme sayımı
-  const birlikte = new Map<string, number>();
-  for (const s of sohbetler) {
-    for (const k of s.kavramlar) {
-      if (k.slug === slug) continue;
-      birlikte.set(k.slug, (birlikte.get(k.slug) ?? 0) + 1);
-    }
-  }
-  const ilgili = [...birlikte]
-    .map(([s, adet]) => ({ ...kavramNesne(s), adet }))
-    .sort((a, b) => b.adet - a.adet)
-    .slice(0, 5);
-
-  const metalar: SohbetMeta[] = sohbetler.map(
-    ({ vurgular, ayetler, ayetlerNotu, bolumler, govde, eslesmeyenKavramlar, ...meta }) => meta,
-  );
-
-  return { ...kavramNesne(slug), adet: sohbetler.length, ilgili, sohbetler: metalar };
-}
-
-/** Ortak kavram sayısına göre en yakın N benzer sohbet. */
-export function getBenzerSohbetler(slug: string, n = 3): SohbetMeta[] {
-  const hedef = getSohbet(slug);
-  if (!hedef) return [];
-  const hedefSet = new Set(hedef.kavramSluglari);
-  return getTumSohbetler()
-    .filter((s) => s.slug !== slug)
-    .map((s) => ({
-      s,
-      ortak: s.kavramSluglari.filter((k) => hedefSet.has(k)).length,
-    }))
-    .filter((x) => x.ortak > 0)
-    .sort((a, b) => b.ortak - a.ortak || (a.s.tarih < b.s.tarih ? 1 : -1))
-    .slice(0, n)
-    .map(({ s }) => {
-      const { vurgular, ayetler, ayetlerNotu, bolumler, govde, eslesmeyenKavramlar, ...meta } = s;
-      return meta;
+    
+    return Array.from(map.values()).sort((a, b) => {
+        if (b.adet !== a.adet) return b.adet - a.adet;
+        return a.ad.localeCompare(b.ad, 'tr');
     });
 }
 
-/** Yıl facet'i: yıl + sohbet adedi, yeniden eskiye. */
-export function getYilFacet(): Array<{ yil: number; adet: number }> {
-  const say = new Map<number, number>();
-  for (const s of getTumSohbetler()) {
-    if (s.yil) say.set(s.yil, (say.get(s.yil) ?? 0) + 1);
-  }
-  return [...say]
-    .map(([yil, adet]) => ({ yil, adet }))
-    .sort((a, b) => b.yil - a.yil);
-}
-
-/** Sure facet'i: sure + sohbet adedi, Kur'an sırasına göre (tahmini ayet verisi). */
-export function getSureFacet(): Array<{
-  sureNo: number;
-  sure: string;
-  adet: number;
-}> {
-  const bilgi = new Map<number, { sure: string; sohbetler: Set<string> }>();
-  for (const s of getTumSohbetler()) {
-    for (const ref of s.ayetler) {
-      if (ref.sureNo == null) continue;
-      let b = bilgi.get(ref.sureNo);
-      if (!b) {
-        b = { sure: ref.sure ?? String(ref.sureNo), sohbetler: new Set() };
-        bilgi.set(ref.sureNo, b);
-      }
-      b.sohbetler.add(s.slug);
+export async function getKavram(slug: string): Promise<(Kavram & { adet: number, ilgili: Array<Kavram & { adet: number }>, sohbetler: SohbetMeta[] }) | undefined> {
+    const sohbetler = await getTumSohbetler();
+    
+    let kavram: Kavram | undefined = undefined;
+    const kavramSohbetler: SohbetMeta[] = [];
+    
+    for (const s of sohbetler) {
+        const found = s.kavramlar.find(k => k.slug === slug);
+        if (found) {
+            if (!kavram) kavram = found;
+            kavramSohbetler.push({
+                slug: s.slug,
+                dosya: s.dosya,
+                baslik: s.baslik,
+                konu: s.konu,
+                ozet: s.ozet,
+                kavramlar: s.kavramlar,
+                kavramSluglari: s.kavramSluglari,
+                sureNolari: s.sureNolari
+            });
+        }
     }
-  }
-  return [...bilgi]
-    .map(([sureNo, b]) => ({ sureNo, sure: b.sure, adet: b.sohbetler.size }))
-    .sort((a, b) => a.sureNo - b.sureNo);
+    
+    if (!kavram) return undefined;
+    
+    // Ilgili kavramlar (co-occurrence in the same sohbetler)
+    const coMap = new Map<string, Kavram & { adet: number }>();
+    for (const s of kavramSohbetler) {
+        for (const k of s.kavramlar) {
+            if (k.slug === slug) continue;
+            const mevcut = coMap.get(k.slug);
+            if (mevcut) {
+                mevcut.adet++;
+            } else {
+                coMap.set(k.slug, { ...k, adet: 1 });
+            }
+        }
+    }
+    
+    const ilgili = Array.from(coMap.values())
+        .sort((a, b) => b.adet - a.adet)
+        .slice(0, 5);
+        
+    return {
+        ...kavram,
+        adet: kavramSohbetler.length,
+        ilgili,
+        sohbetler: kavramSohbetler
+    };
 }
 
-/** Ayet indeksi: sure numarasına göre gruplanmış (Kur'an sırası). */
-export function getAyetIndeksi(): Array<{
+export async function getBenzerSohbetler(slug: string, n: number = 3): Promise<SohbetMeta[]> {
+    const sohbetler = await getTumSohbetler();
+    const hedef = sohbetler.find(s => s.slug === slug);
+    if (!hedef) return [];
+    
+    const hedefKavramlar = new Set(hedef.kavramSluglari);
+    
+    const skorlar = sohbetler
+        .filter(s => s.slug !== slug)
+        .map(s => {
+            const ortak = s.kavramSluglari.filter(k => hedefKavramlar.has(k)).length;
+            return { sohbet: s, ortak };
+        })
+        .filter(x => x.ortak > 0)
+        .sort((a, b) => b.ortak - a.ortak);
+        
+    return skorlar.slice(0, n).map(x => {
+        const s = x.sohbet;
+        return {
+            slug: s.slug,
+            dosya: s.dosya,
+            baslik: s.baslik,
+            konu: s.konu,
+            ozet: s.ozet,
+            kavramlar: s.kavramlar,
+            kavramSluglari: s.kavramSluglari,
+            sureNolari: s.sureNolari
+        };
+    });
+}
+
+export async function getYilFacet(): Promise<Array<{ yil: number, adet: number }>> {
+    return [];
+}
+
+export async function getSureFacet(): Promise<Array<{ sureNo: number, sure: string, adet: number }>> {
+    const sohbetler = await getTumSohbetler();
+    const map = new Map<number, { sureNo: number, sure: string, adet: number }>();
+    
+    for (const s of sohbetler) {
+        const gorulen = new Set<number>();
+        for (const a of s.ayetler) {
+            if (a.sureNo && a.sure) {
+                if (!gorulen.has(a.sureNo)) {
+                    gorulen.add(a.sureNo);
+                    const mevcut = map.get(a.sureNo);
+                    if (mevcut) {
+                        mevcut.adet++;
+                    } else {
+                        map.set(a.sureNo, { sureNo: a.sureNo, sure: a.sure, adet: 1 });
+                    }
+                }
+            }
+        }
+    }
+    
+    return Array.from(map.values()).sort((a, b) => b.adet - a.adet);
+}
+
+export async function getAyetIndeksi(): Promise<Array<{
   sure: string;
   sureNo: number;
   ayetler: Array<AyetRef & { sohbetler: Array<{ slug: string; baslik: string }> }>;
   sohbetSayisi: number;
-}> {
-  // sureNo -> { ad, ayet(key) -> ref + sohbetler }
-  const gruplar = new Map<
-    number,
-    {
-      sure: string;
-      ayetler: Map<string, AyetRef & { sohbetler: Array<{ slug: string; baslik: string }> }>;
-      sohbetler: Set<string>;
-    }
-  >();
+}>> {
+    const sohbetler = await getTumSohbetler();
 
-  for (const s of getTumSohbetler()) {
-    for (const ref of s.ayetler) {
-      if (ref.sureNo == null) continue;
-      let grup = gruplar.get(ref.sureNo);
-      if (!grup) {
-        grup = { sure: ref.sure ?? String(ref.sureNo), ayetler: new Map(), sohbetler: new Set() };
-        gruplar.set(ref.sureNo, grup);
+    const gruplar = new Map<
+      number,
+      {
+        sure: string;
+        ayetler: Map<string, AyetRef & { sohbetler: Array<{ slug: string; baslik: string }> }>;
+        sohbetlerSet: Set<string>;
       }
-      grup.sohbetler.add(s.slug);
-      const key = `${ref.sureNo}:${ref.ayet}`;
-      let ayet = grup.ayetler.get(key);
-      if (!ayet) {
-        ayet = { ...ref, sohbetler: [] };
-        grup.ayetler.set(key, ayet);
-      }
-      ayet.sohbetler.push({ slug: s.slug, baslik: s.baslik });
-    }
-  }
+    >();
 
-  return [...gruplar]
-    .sort((a, b) => a[0] - b[0])
-    .map(([sureNo, grup]) => ({
-      sure: grup.sure,
-      sureNo,
-      ayetler: [...grup.ayetler.values()].sort((a, b) =>
-        Number(a.ayet) - Number(b.ayet),
-      ),
-      sohbetSayisi: grup.sohbetler.size,
-    }));
+    for (const s of sohbetler) {
+      for (const ref of s.ayetler) {
+        if (ref.sureNo == null) continue;
+        let grup = gruplar.get(ref.sureNo);
+        if (!grup) {
+          grup = { sure: ref.sure ?? String(ref.sureNo), ayetler: new Map(), sohbetlerSet: new Set() };
+          gruplar.set(ref.sureNo, grup);
+        }
+        grup.sohbetlerSet.add(s.slug);
+        const key = `${ref.sureNo}:${ref.ayet}`;
+        let ayet = grup.ayetler.get(key);
+        if (!ayet) {
+          ayet = { ...ref, sohbetler: [] };
+          grup.ayetler.set(key, ayet);
+        }
+        ayet.sohbetler.push({ slug: s.slug, baslik: s.baslik });
+      }
+    }
+
+    return [...gruplar]
+      .sort((a, b) => a[0] - b[0])
+      .map(([sureNo, grup]) => ({
+        sure: grup.sure,
+        sureNo,
+        ayetler: [...grup.ayetler.values()].sort((a, b) =>
+          Number(a.ayet) - Number(b.ayet),
+        ),
+        sohbetSayisi: grup.sohbetlerSet.size,
+      }));
 }

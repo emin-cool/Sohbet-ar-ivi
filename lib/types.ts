@@ -35,9 +35,7 @@ export interface SohbetMeta {
   slug: string;
   dosya: string;
   baslik: string;
-  tarih: string; // ISO: YYYY-MM-DD (dosya adından, en güvenilir kaynak)
-  tarihTr: string; // "7 Temmuz 2025"
-  yil: number;
+
   konu: string;
   ozet: string;
   kavramlar: Kavram[];

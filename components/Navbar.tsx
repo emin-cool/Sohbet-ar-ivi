@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 import AramaOverlay from "./AramaOverlay";
 
 // CLAUDE.md tutarlılık kuralı: tüm sayfalarda standart marka + menü.
@@ -16,6 +17,7 @@ const MENU = [
 export default function Navbar() {
   const pathname = usePathname();
   const [aramaAcik, setAramaAcik] = useState(false);
+  const { data: session } = useSession();
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/90 backdrop-blur">
@@ -23,9 +25,9 @@ export default function Navbar() {
         <Link
           href="/"
           className="font-serif text-xl font-bold text-accent"
-          aria-label="Sohbet Arşivi ana sayfa"
+          aria-label="Pazartesi Sohbetleri ana sayfa"
         >
-          Sohbet Arşivi
+          Pazartesi Sohbetleri
         </Link>
 
         <ul className="hidden items-center gap-7 md:flex">
@@ -57,11 +59,33 @@ export default function Navbar() {
           >
             <SearchIcon />
           </button>
+          
+          {session ? (
+            <div className="flex items-center gap-2 pl-2">
+              <Link href="/admin" className="text-sm font-medium text-accent hover:text-accent-hover bg-accent-soft/10 px-2 py-1 rounded">
+                Yönetim Paneli
+              </Link>
+              <button 
+                onClick={() => signOut()} 
+                className="text-sm font-medium text-muted hover:text-red-500"
+              >
+                Çıkış
+              </button>
+            </div>
+          ) : (
+            <Link 
+              href="/login" 
+              className="ml-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+            >
+              Giriş Yap
+            </Link>
+          )}
+
           {/* Mobil menü ikonu */}
           <Link
             href="/sohbetler"
             aria-label="Menü"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-ink/70 transition-colors hover:bg-surface hover:text-accent md:hidden"
+            className="ml-1 flex h-9 w-9 items-center justify-center rounded-full text-ink/70 transition-colors hover:bg-surface hover:text-accent md:hidden"
           >
             <MenuIcon />
           </Link>

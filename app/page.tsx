@@ -3,19 +3,44 @@ import DevamEt from "@/components/DevamEt";
 import HeroArama from "@/components/HeroArama";
 import SohbetKarti from "@/components/SohbetKarti";
 import { getKavramlar, getSohbetMetalar } from "@/lib/content";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-export default function AnaSayfa() {
-  const sohbetler = getSohbetMetalar();
+export default async function AnaSayfa() {
+  const sohbetler = await getSohbetMetalar();
   const sonEklenenler = sohbetler.slice(0, 3);
-  const kavramlar = getKavramlar().slice(0, 9);
+  const kavramlar = (await getKavramlar()).slice(0, 9);
   const enCok = kavramlar[0]?.adet ?? 1;
+
+  const session = await getServerSession(authOptions);
+  let dbDevamEt = null;
+
+  if (session && session.user) {
+    const lastProgress = await prisma.readProgress.findFirst({
+      where: { userId: session.user.id },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (lastProgress) {
+      const s = sohbetler.find((x) => x.slug === lastProgress.slug);
+      if (s) {
+        dbDevamEt = {
+          slug: lastProgress.slug,
+          sectionId: lastProgress.sectionId || "",
+          baslik: lastProgress.sectionTitle || "Kaldığınız Bölüm",
+          sohbetBaslik: s.baslik,
+        };
+      }
+    }
+  }
 
   return (
     <main className="mx-auto max-w-site px-6">
       {/* Hero */}
       <section className="py-16 text-center sm:py-20">
         <h1 className="mx-auto max-w-3xl font-serif text-4xl font-bold leading-tight text-ink sm:text-5xl">
-          İsmail Acarkan Sohbet Kayıtları
+          İsmail Acarkan Pazartesi Sohbetleri
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-muted">
           Türkçe İslami sohbet kayıtları arşivi. Kavram, ayet ve konuya göre okuyun,
@@ -29,6 +54,7 @@ export default function AnaSayfa() {
       {/* Kaldığın yerden devam et (localStorage — kayıt yoksa render edilmez) */}
       <DevamEt
         sohbetler={sohbetler.map((s) => ({ slug: s.slug, baslik: s.baslik }))}
+        dbDevamEt={dbDevamEt}
       />
 
       {/* Son Eklenen Sohbetler */}

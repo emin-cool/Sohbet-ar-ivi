@@ -1,78 +1,180 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { slugify } from "@/lib/slugify";
+import { isoToTr, isoToYil } from "@/lib/dates";
 
-const SOHBET_DIR = path.join(process.cwd(), "content", "sohbetler");
+/** Admin kontrolü */
+async function checkAdmin() {
+  const session = await getServerSession(authOptions);
+  return session?.user?.role === "ADMIN";
+}
 
+/** Tek sohbet okuma (ham markdown) */
 export async function GET(req: NextRequest) {
-  if (process.env.NODE_ENV !== "development") {
+  if (!(await checkAdmin())) {
     return NextResponse.json({ error: "Erişim engellendi" }, { status: 403 });
   }
 
-  const filename = req.nextUrl.searchParams.get("filename");
-  if (!filename || !filename.endsWith(".md")) {
-    return NextResponse.json({ error: "Geçerli bir .md dosyası belirtilmedi" }, { status: 400 });
+  const slug = req.nextUrl.searchParams.get("slug");
+  if (!slug) {
+    return NextResponse.json(
+      { error: "slug parametresi gerekli" },
+      { status: 400 }
+    );
   }
 
-  const filePath = path.join(SOHBET_DIR, filename);
-
   try {
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 404 });
+    const sohbet = await prisma.sohbetRecord.findUnique({
+      where: { slug },
+    });
+
+    if (!sohbet) {
+      return NextResponse.json(
+        { error: "Sohbet bulunamadı" },
+        { status: 404 }
+      );
     }
 
-    const content = fs.readFileSync(filePath, "utf-8");
-    return NextResponse.json({ content });
+    return NextResponse.json({
+      slug: sohbet.slug,
+      baslik: sohbet.baslik,
+      content: sohbet.rawContent,
+      ayetlerNotu: sohbet.ayetlerNotu || "",
+      ayetlerJson: sohbet.ayetlerJson || "[]",
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
+/** Sohbet güncelleme (ham markdown düzenleme) */
 export async function PUT(req: NextRequest) {
-  if (process.env.NODE_ENV !== "development") {
+  if (!(await checkAdmin())) {
     return NextResponse.json({ error: "Erişim engellendi" }, { status: 403 });
   }
 
-  const filename = req.nextUrl.searchParams.get("filename");
-  if (!filename || !filename.endsWith(".md")) {
-    return NextResponse.json({ error: "Sadece .md dosyaları güncellenebilir" }, { status: 400 });
+  const slug = req.nextUrl.searchParams.get("slug");
+  if (!slug) {
+    return NextResponse.json(
+      { error: "slug parametresi gerekli" },
+      { status: 400 }
+    );
   }
 
-  const filePath = path.join(SOHBET_DIR, filename);
-
   try {
-    const { content } = await req.json();
-    
+    const { content, baslik, ayetlerNotu } = await req.json();
+
     if (typeof content !== "string") {
-      return NextResponse.json({ error: "Geçersiz içerik formatı" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Geçersiz içerik formatı" },
+        { status: 400 }
+      );
     }
 
-    fs.writeFileSync(filePath, content, "utf-8");
-    return NextResponse.json({ success: true, message: "Dosya başarıyla kaydedildi." });
+    // Markdown'dan meta verileri yeniden çıkar
+    const bolumIndex = content.search(/^##\s+/m);
+    const header = bolumIndex === -1 ? content : content.slice(0, bolumIndex);
+    const govde = bolumIndex === -1 ? "" : content.slice(bolumIndex).trim();
+
+    // Etiket değerlerini çıkar
+    function etiketDegeri(h: string, etiket: string): string {
+      const re = new RegExp(
+        `\\*\\*${etiket}:\\*\\*([\\s\\S]*?)(?=\\n\\*\\*[^\\n]+?:\\*\\*|$)`
+      );
+      const m = re.exec(h);
+      return m ? m[1].trim() : "";
+    }
+
+    function vurgulariAyikla(h: string): string[] {
+      const blok = etiketDegeri(h, "Öne Çıkan Vurgular");
+      return blok
+        .split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s.startsWith("- "))
+        .map((s) => s.slice(2).trim())
+        .filter(Boolean);
+    }
+
+    // Bölümleri çıkar
+    const bolumler: Array<{ baslik: string }> = [];
+    const reBaslik = /^##\s+(.+?)\s*$/gm;
+    let m: RegExpExecArray | null;
+    while ((m = reBaslik.exec(govde)) !== null) {
+      bolumler.push({ baslik: m[1].trim() });
+    }
+
+    const guncellenenBaslik = baslik || etiketDegeri(header, "Konu") || slug;
+    const finalAyetlerNotu = ayetlerNotu !== undefined ? ayetlerNotu : etiketDegeri(header, "Geçen Ayetler");
+    
+    const { ayetleriAyikla } = require("@/lib/content");
+    const ayetlerJsonStr = JSON.stringify(ayetleriAyikla(finalAyetlerNotu));
+
+    const updateData: any = {
+      rawContent: content,
+      govde,
+      konu: etiketDegeri(header, "Konu"),
+      ozet: etiketDegeri(header, "Kısa Özet"),
+      kavramlarRaw: etiketDegeri(header, "Kavramlar"),
+      vurgularJson: JSON.stringify(vurgulariAyikla(header)),
+      ayetlerNotu: finalAyetlerNotu,
+      ayetlerJson: ayetlerJsonStr,
+      bolumlerJson: JSON.stringify(bolumler),
+      updatedAt: new Date(),
+    };
+
+    if (baslik) {
+      updateData.baslik = baslik;
+      updateData.dosyaAdi = `${baslik}.md`;
+    }
+
+    await prisma.sohbetRecord.update({
+      where: { slug },
+      data: updateData,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Sohbet başarıyla güncellendi.",
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
+/** Sohbet silme */
 export async function DELETE(req: NextRequest) {
-  if (process.env.NODE_ENV !== "development") {
+  if (!(await checkAdmin())) {
     return NextResponse.json({ error: "Erişim engellendi" }, { status: 403 });
   }
 
-  const filename = req.nextUrl.searchParams.get("filename");
-  if (!filename || !filename.endsWith(".md")) {
-    return NextResponse.json({ error: "Geçersiz dosya formatı" }, { status: 400 });
+  const slug = req.nextUrl.searchParams.get("slug");
+  if (!slug) {
+    return NextResponse.json(
+      { error: "slug parametresi gerekli" },
+      { status: 400 }
+    );
   }
 
-  const filePath = path.join(SOHBET_DIR, filename);
-
   try {
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 404 });
+    const sohbet = await prisma.sohbetRecord.findUnique({
+      where: { slug },
+    });
+
+    if (!sohbet) {
+      return NextResponse.json(
+        { error: "Sohbet bulunamadı" },
+        { status: 404 }
+      );
     }
 
-    fs.unlinkSync(filePath);
-    return NextResponse.json({ success: true, message: "Dosya başarıyla silindi." });
+    await prisma.sohbetRecord.delete({ where: { slug } });
+
+    return NextResponse.json({
+      success: true,
+      message: "Sohbet başarıyla silindi.",
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

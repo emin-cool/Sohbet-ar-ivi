@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="mt-20 border-t border-line">
       <div className="mx-auto flex max-w-site flex-col gap-4 px-6 py-10 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
         <p className="font-serif text-base font-semibold text-accent">
-          Sohbet Arşivi
+          Pazartesi Sohbetleri
         </p>
         <nav className="flex items-center gap-4" aria-label="Yıllara göre">
           {YILLAR.map((y) => (

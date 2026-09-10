@@ -19,9 +19,6 @@ export default function SohbetListeKarti({ sohbet }: Props) {
             {sohbet.baslik}
           </Link>
         </h3>
-        <span className="order-2 shrink-0 rounded-full bg-badge px-3 py-1 text-right text-sm font-medium leading-tight text-badge-fg">
-          {sohbet.tarihTr}
-        </span>
       </div>
 
       {sohbet.kavramlar.length > 0 && (

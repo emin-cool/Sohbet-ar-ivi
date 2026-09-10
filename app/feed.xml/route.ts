@@ -2,7 +2,7 @@ import { getSohbetMetalar } from '@/lib/content';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const sohbetler = getSohbetMetalar();
+  const sohbetler = await getSohbetMetalar();
   const baseUrl = 'https://sohbetarsivi.com';
 
   const items = sohbetler.map((sohbet) => {
@@ -11,7 +11,6 @@ export async function GET() {
         <title><![CDATA[${sohbet.baslik}]]></title>
         <link>${baseUrl}/sohbet/${sohbet.slug}</link>
         <guid>${baseUrl}/sohbet/${sohbet.slug}</guid>
-        <pubDate>${new Date(sohbet.tarih).toUTCString()}</pubDate>
         <description><![CDATA[${sohbet.ozet || ''}]]></description>
       </item>
     `;
@@ -20,7 +19,7 @@ export async function GET() {
   const rss = `<?xml version="1.0" encoding="UTF-8" ?>
     <rss version="2.0">
       <channel>
-        <title>Sohbet Arşivi</title>
+        <title>Pazartesi Sohbetleri</title>
         <link>${baseUrl}</link>
         <description>İslami sohbet kayıtları, transkriptler ve kavramlar sözlüğü.</description>
         <language>tr</language>

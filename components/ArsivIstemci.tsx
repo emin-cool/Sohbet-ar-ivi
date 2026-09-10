@@ -10,10 +10,7 @@ interface KavramFacet {
   kisaAd: string;
   adet: number;
 }
-interface YilFacet {
-  yil: number;
-  adet: number;
-}
+
 interface SureFacet {
   sureNo: number;
   sure: string;
@@ -23,7 +20,7 @@ interface SureFacet {
 interface Props {
   sohbetler: SohbetMeta[];
   kavramFacet: KavramFacet[];
-  yilFacet: YilFacet[];
+
   sureFacet: SureFacet[];
 }
 
@@ -33,7 +30,7 @@ const parseList = (s: string | null): string[] =>
 export default function ArsivIstemci({
   sohbetler,
   kavramFacet,
-  yilFacet,
+
   sureFacet,
 }: Props) {
   const router = useRouter();
@@ -41,7 +38,7 @@ export default function ArsivIstemci({
   const sp = useSearchParams();
 
   const kavram = parseList(sp.get("kavram"));
-  const yil = parseList(sp.get("yil"));
+
   const sure = parseList(sp.get("sure"));
   const sirala = sp.get("sirala") ?? "yeni";
   const q = sp.get("q") ?? "";
@@ -74,7 +71,7 @@ export default function ArsivIstemci({
     let liste = sohbetler.filter((s) => {
       if (kavram.length && !s.kavramSluglari.some((k) => kavram.includes(k)))
         return false;
-      if (yil.length && !yil.includes(String(s.yil))) return false;
+
       if (
         sure.length &&
         !s.sureNolari.some((n) => sure.includes(String(n)))
@@ -86,23 +83,10 @@ export default function ArsivIstemci({
       }
       return true;
     });
-    liste = [...liste].sort((a, b) =>
-      sirala === "eski"
-        ? a.tarih < b.tarih
-          ? -1
-          : a.tarih > b.tarih
-            ? 1
-            : 0
-        : a.tarih < b.tarih
-          ? 1
-          : a.tarih > b.tarih
-            ? -1
-            : 0,
-    );
     return liste;
-  }, [sohbetler, kavram, yil, sure, q, sirala]);
+  }, [sohbetler, kavram, sure, q]);
 
-  const filtreVar = kavram.length + yil.length + sure.length > 0 || q !== "";
+  const filtreVar = kavram.length + sure.length > 0 || q !== "";
 
   const gorunenSureler = sureFacet.filter((s) =>
     s.sure.toLocaleLowerCase("tr").includes(sureArama.toLocaleLowerCase("tr")),
@@ -114,7 +98,7 @@ export default function ArsivIstemci({
       etiket: kavramFacet.find((k) => k.slug === slug)?.kisaAd ?? slug,
       kaldir: () => toggle("kavram", slug, kavram),
     })),
-    ...yil.map((y) => ({ etiket: y, kaldir: () => toggle("yil", y, yil) })),
+
     ...sure.map((n) => ({
       etiket: sureFacet.find((s) => String(s.sureNo) === n)?.sure ?? n,
       kaldir: () => toggle("sure", n, sure),
@@ -139,19 +123,7 @@ export default function ArsivIstemci({
         </ul>
       </FacetBolum>
 
-      <FacetBolum baslik="Tarih" katlanabilir>
-        <ul className="space-y-2.5">
-          {yilFacet.map((y) => (
-            <CheckSatir
-              key={y.yil}
-              secili={yil.includes(String(y.yil))}
-              onToggle={() => toggle("yil", String(y.yil), yil)}
-              etiket={String(y.yil)}
-              adet={y.adet}
-            />
-          ))}
-        </ul>
-      </FacetBolum>
+
 
       <FacetBolum baslik="Sureler" katlanabilir>
         <input
@@ -203,7 +175,7 @@ export default function ArsivIstemci({
           <FilterIcon /> Filtrele
           {filtreVar && (
             <span className="ml-1 rounded-full bg-accent px-1.5 text-xs text-accent-fg">
-              {kavram.length + yil.length + sure.length + (q ? 1 : 0)}
+              {kavram.length + sure.length + (q ? 1 : 0)}
             </span>
           )}
         </button>
@@ -249,19 +221,9 @@ export default function ArsivIstemci({
               </button>
             ))}
           </div>
-
-          <label className="flex items-center gap-2 text-sm text-muted">
-            Sırala:
-            <select
-              value={sirala}
-              onChange={(e) => setParam("sirala", e.target.value === "yeni" ? [] : [e.target.value])}
-              className="rounded-md border border-line bg-surface px-2 py-1.5 text-ink outline-none focus:border-accent"
-            >
-              <option value="yeni">Yeniden eskiye</option>
-              <option value="eski">Eskiden yeniye</option>
-            </select>
-          </label>
         </div>
+
+
 
         <p className="mb-4 text-sm text-muted">{filtrelenmis.length} sonuç</p>
 

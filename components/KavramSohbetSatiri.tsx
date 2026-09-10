@@ -6,11 +6,14 @@ import KavramChip from "./KavramChip";
 export default function KavramSohbetSatiri({ sohbet }: { sohbet: SohbetMeta }) {
   return (
     <article className="group flex items-start gap-5 border-b border-line py-7 last:border-0">
-      {/* Sol: tarih */}
-      <div className="hidden w-28 shrink-0 pt-1 text-sm text-muted sm:block">
-        <div>{sohbet.tarihTr}</div>
+      {/* Sol: ikon */}
+      <div className="w-16 shrink-0 sm:w-20 md:w-24 border-r border-line/30 pr-4 flex items-center justify-center">
+        <svg className="w-5 h-5 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
       </div>
-
       {/* Orta: etiketler + başlık + özet */}
       <div className="min-w-0 flex-1">
         {sohbet.kavramlar.length > 0 && (
@@ -31,10 +34,6 @@ export default function KavramSohbetSatiri({ sohbet }: { sohbet: SohbetMeta }) {
         <p className="mt-2 line-clamp-2 leading-relaxed text-muted">
           {sohbet.ozet}
         </p>
-        {/* Mobil tarih */}
-        <div className="mt-2 text-sm text-muted sm:hidden">
-          {sohbet.tarihTr}
-        </div>
       </div>
 
       {/* Sağ: oku butonu -> detay */}

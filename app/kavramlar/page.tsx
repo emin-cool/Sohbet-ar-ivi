@@ -1,17 +1,21 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getKavramlar } from "@/lib/content";
+import KavramEditButton from "@/components/admin/KavramEditButton";
+import { Fragment } from "react";
 
 export const metadata: Metadata = {
   title: "Kavramlar",
   description: "Sohbetlerde işlenen ana kavramlar ve her birinin geçtiği sohbet sayısı.",
 };
 
-export default function KavramlarSayfasi() {
-  const kavramlar = getKavramlar();
+export default async function KavramlarSayfasi() {
+  const kavramlar = await getKavramlar();
 
   return (
-    <main className="mx-auto max-w-site px-6 py-12">
+    <Fragment>
+      <KavramEditButton />
+      <main className="mx-auto max-w-site px-6 py-12">
       <header>
         <h1 className="font-serif text-4xl font-bold text-ink sm:text-5xl">
           Kavramlar
@@ -36,6 +40,7 @@ export default function KavramlarSayfasi() {
           </li>
         ))}
       </ul>
-    </main>
+      </main>
+    </Fragment>
   );
 }

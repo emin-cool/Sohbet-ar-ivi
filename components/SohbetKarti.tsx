@@ -11,9 +11,7 @@ export default function SohbetKarti({ sohbet }: Props) {
   return (
     <article className="group flex flex-col rounded-card border border-line bg-surface p-6 shadow-card transition-shadow hover:shadow-card-hover">
       <div className="mb-3 flex items-center justify-between">
-        <time className="text-sm text-muted">{sohbet.tarihTr}</time>
       </div>
-
       <h3 className="font-serif text-xl font-semibold leading-snug text-ink">
         <Link
           href={`/sohbet/${sohbet.slug}`}

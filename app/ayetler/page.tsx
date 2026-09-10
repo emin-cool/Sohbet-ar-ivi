@@ -8,8 +8,8 @@ export const metadata: Metadata = {
     "Sohbetlerde geçen sure ve ayetler, Kur'an-ı Kerim sırasına göre düzenlenmiştir.",
 };
 
-export default function AyetlerSayfasi() {
-  const gruplar = getAyetIndeksi();
+export default async function AyetlerSayfasi() {
+  const gruplar = await getAyetIndeksi();
 
   return (
     <main className="mx-auto max-w-site px-6 py-12">
@@ -18,7 +18,7 @@ export default function AyetlerSayfasi() {
           Ayet İndeksi
         </h1>
         <p className="mt-3 max-w-2xl text-muted">
-          Sohbetlerde geçen sure ve ayetler. Kur'an-ı Kerim sırasına göre
+          Sohbetlerde geçen sure ve ayetler. Kur&apos;an-ı Kerim sırasına göre
           düzenlenmiştir.
         </p>
       </header>

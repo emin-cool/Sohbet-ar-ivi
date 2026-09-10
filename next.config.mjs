@@ -1,8 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Tüm sayfalar SSG; Pagefind build sonrası `out/` üzerinde indeksler (postbuild).
-  output: "export",
+  experimental: {
+    serverComponentsExternalPackages: ['better-sqlite3', '@prisma/adapter-better-sqlite3'],
+    serverActions: {
+      bodySizeLimit: '200mb',
+    }
+  }
 };
 
 export default nextConfig;

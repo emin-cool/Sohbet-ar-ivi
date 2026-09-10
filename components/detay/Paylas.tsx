@@ -51,7 +51,7 @@ export default function Paylas({ baslik }: { baslik: string }) {
             rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-ink transition-colors hover:bg-bg"
           >
-            <WhatsAppIcon /> WhatsApp'ta paylaş
+            <WhatsAppIcon /> WhatsApp&apos;ta paylaş
           </a>
           <button
             onClick={kopyala}

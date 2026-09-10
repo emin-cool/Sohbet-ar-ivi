@@ -3,6 +3,8 @@ import { Inter, Lora } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { AdminProvider } from "@/components/admin/AdminContext";
+import { AuthProvider } from "@/components/AuthProvider";
 
 
 // Gövde: Inter · Başlıklar: Lora (zarif serif)
@@ -20,8 +22,8 @@ const lora = Lora({
 
 export const metadata: Metadata = {
   title: {
-    default: "Sohbet Arşivi",
-    template: "%s · Sohbet Arşivi",
+    default: "Pazartesi Sohbetleri",
+    template: "%s · Pazartesi Sohbetleri",
   },
   description:
     "Türkçe İslami sohbet kayıtları için okuma ve dinleme arşivi. Kavram, ayet ve konuya göre gezinin.",
@@ -43,9 +45,13 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-screen flex-col">
-          <Navbar />
-          <div className="flex-1">{children}</div>
-          <Footer />
+        <AuthProvider>
+          <AdminProvider>
+            <Navbar />
+            <div className="flex-1">{children}</div>
+            <Footer />
+          </AdminProvider>
+        </AuthProvider>
       </body>
     </html>
   );
