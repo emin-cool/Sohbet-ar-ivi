@@ -86,7 +86,7 @@ async function getAllData(): Promise<{ sohbetler: Sohbet[] }> {
     }
 
     // Process sohbet records and map to application types
-    const sohbetler: Sohbet[] = dbSohbetler.map(row => {
+    const sohbetler: Sohbet[] = dbSohbetler.map((row: any) => {
         let vurgular: string[] = [];
         try { vurgular = JSON.parse(row.vurgularJson || '[]'); } catch(e) {}
         
