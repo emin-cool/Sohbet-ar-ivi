@@ -56,7 +56,7 @@ export async function PUT(req: NextRequest) {
     }
 
     // Mevcut kavramları sil ve yeniden oluştur (atomic update)
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       await tx.kavramRecord.deleteMany({});
 
       const records = Object.entries(data).map(
