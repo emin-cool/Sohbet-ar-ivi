@@ -14,7 +14,7 @@ async function main() {
     if (strangeChars) {
       const uniqueStrange = [...new Set(strangeChars)];
       console.log("Strange characters found:", uniqueStrange);
-      for (const char of uniqueStrange) {
+      for (const char of (uniqueStrange as string[])) {
         console.log(`Char: ${char} - Hex: ${char.charCodeAt(0).toString(16)}`);
         if (char.length > 1) { // checking surrogate pairs
             console.log(`  Surrogate 1: ${char.charCodeAt(0).toString(16)}, Surrogate 2: ${char.charCodeAt(1).toString(16)}`);
