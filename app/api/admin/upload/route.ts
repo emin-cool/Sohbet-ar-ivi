@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { convertToMarkdown, parseMetaBlock, detectFormat } from "@/lib/converter";
 import { slugify } from "@/lib/slugify";
 import { isoToTr, isoToYil } from "@/lib/dates";
+import { revalidatePath } from "next/cache";
+import { ayetleriAyikla, clearContentCache } from "@/lib/content";
 
 export const maxDuration = 300; // 5 dakika (upload uzun sürebilir)
 
@@ -86,7 +88,6 @@ export async function POST(req: NextRequest) {
         const govde =
           bolumIndex === -1 ? result.markdown : result.markdown.slice(bolumIndex).trim();
           
-        const { ayetleriAyikla } = require("@/lib/content");
         const ayetler = ayetleriAyikla(ayetlerNotu);
 
         // DB'ye kaydet
@@ -125,6 +126,23 @@ export async function POST(req: NextRequest) {
 
     const basarili = sonuclar.filter((s) => s.basarili).length;
     const hatali = sonuclar.filter((s) => !s.basarili).length;
+
+    if (basarili > 0) {
+      clearContentCache();
+      try {
+        revalidatePath("/sohbetler");
+        revalidatePath("/ayetler");
+        revalidatePath("/kavramlar");
+        revalidatePath("/");
+        for (const s of sonuclar) {
+          if (s.basarili && s.slug) {
+            revalidatePath(`/sohbet/${s.slug}`);
+          }
+        }
+      } catch (e) {
+        console.error("Revalidate hatası:", e);
+      }
+    }
 
     return NextResponse.json({
       success: hatali === 0,

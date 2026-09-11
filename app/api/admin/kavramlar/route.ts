@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { clearContentCache } from "@/lib/content";
 
 /** Admin kontrolü */
 async function checkAdmin() {
@@ -26,10 +28,16 @@ export async function GET() {
       { ad: string; kisa_ad?: string; aliases: string[] }
     > = {};
     for (const k of kavramlar) {
+      let aliases: string[] = [];
+      try {
+        aliases = JSON.parse(k.aliases || "[]");
+      } catch (e) {
+        aliases = [];
+      }
       result[k.slug] = {
         ad: k.ad,
         kisa_ad: k.kisaAd || undefined,
-        aliases: JSON.parse(k.aliases),
+        aliases,
       };
     }
 
@@ -73,6 +81,18 @@ export async function PUT(req: NextRequest) {
       }
     });
 
+    clearContentCache();
+    try {
+      revalidatePath("/kavramlar");
+      revalidatePath("/");
+      revalidatePath("/sohbetler");
+      for (const slug of Object.keys(data)) {
+        revalidatePath(`/kavram/${slug}`);
+      }
+    } catch (e) {
+      console.error("Revalidate hatası:", e);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Kavramlar başarıyla güncellendi.",
@@ -114,6 +134,16 @@ export async function POST(req: NextRequest) {
         aliases: JSON.stringify(aliases || []),
       },
     });
+
+    clearContentCache();
+    try {
+      revalidatePath("/kavramlar");
+      revalidatePath(`/kavram/${slug}`);
+      revalidatePath("/");
+      revalidatePath("/sohbetler");
+    } catch (e) {
+      console.error("Revalidate hatası:", e);
+    }
 
     return NextResponse.json({
       success: true,

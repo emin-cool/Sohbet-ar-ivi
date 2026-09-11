@@ -24,13 +24,16 @@ export default function RichTextEditor({ initialValue, onChange }: RichTextEdito
     codeBlockStyle: "fenced",
   }), []);
   
-  // Sadece ilk yüklemede Markdown'u HTML'e çevir
+  const isLoadedRef = useRef(false);
+
+  // Sadece ilk yüklemede veya initialValue geldiğinde Markdown'u HTML'e çevir
   useEffect(() => {
-    // marked.parse Promise veya string dönebilir, biz string olarak bekliyoruz
-    const html = marked.parse(initialValue) as string;
-    setHtmlContent(html);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (!isLoadedRef.current && initialValue) {
+      const html = marked.parse(initialValue) as string;
+      setHtmlContent(html);
+      isLoadedRef.current = true;
+    }
+  }, [initialValue]);
 
   const handleChange = (content: string) => {
     setHtmlContent(content);

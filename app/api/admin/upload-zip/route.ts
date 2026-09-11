@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { convertToMarkdown, detectFormat } from "@/lib/converter";
 import AdmZip from "adm-zip";
+import { revalidatePath } from "next/cache";
+import { ayetleriAyikla, clearContentCache } from "@/lib/content";
 
 export const maxDuration = 300; // Vercel için 5 dk izin
 
@@ -73,6 +75,10 @@ export async function POST(req: NextRequest) {
         
         if (!slug) slug = `sohbet-${Date.now()}`;
 
+        const ayetlerNotu = conversion.meta.ayetlerNotu || "";
+        const ayetler = ayetleriAyikla(ayetlerNotu);
+        const bolumler = (conversion.sections || []).map((s: string) => ({ baslik: s }));
+
         // DB'ye kaydet
         await prisma.sohbetRecord.create({
           data: {
@@ -83,9 +89,9 @@ export async function POST(req: NextRequest) {
             ozet: conversion.meta.ozet || "",
             kavramlarRaw: conversion.meta.kavramlarRaw || "",
             vurgularJson: JSON.stringify(conversion.meta.vurgular || []),
-            ayetlerNotu: conversion.meta.ayetlerNotu || "",
-            ayetlerJson: "[]",
-            bolumlerJson: JSON.stringify(conversion.sections || []),
+            ayetlerNotu,
+            ayetlerJson: JSON.stringify(ayetler),
+            bolumlerJson: JSON.stringify(bolumler),
             govde: conversion.markdown,
             rawContent: conversion.markdown,
           },
@@ -104,6 +110,18 @@ export async function POST(req: NextRequest) {
           durum: "hata",
           hata: err.message || "Bilinmeyen Hata",
         });
+      }
+    }
+
+    if (basariliCount > 0) {
+      clearContentCache();
+      try {
+        revalidatePath("/sohbetler");
+        revalidatePath("/ayetler");
+        revalidatePath("/kavramlar");
+        revalidatePath("/");
+      } catch (e) {
+        console.error("Revalidate hatası:", e);
       }
     }
 

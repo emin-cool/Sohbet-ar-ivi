@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
 import { isoToTr, isoToYil } from "@/lib/dates";
+import { revalidatePath } from "next/cache";
+import { ayetleriAyikla, clearContentCache } from "@/lib/content";
 
 /** Admin kontrolü */
 async function checkAdmin() {
@@ -105,15 +107,27 @@ export async function PUT(req: NextRequest) {
       bolumler.push({ baslik: m[1].trim() });
     }
 
-    const guncellenenBaslik = baslik || etiketDegeri(header, "Konu") || slug;
+    const existing = await prisma.sohbetRecord.findUnique({
+      where: { slug },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Güncellenecek sohbet bulunamadı" },
+        { status: 404 }
+      );
+    }
+
+    const guncellenenBaslik = baslik?.trim() || existing.baslik || etiketDegeri(header, "Konu") || slug;
     const finalAyetlerNotu = ayetlerNotu !== undefined ? ayetlerNotu : etiketDegeri(header, "Geçen Ayetler");
     
-    const { ayetleriAyikla } = require("@/lib/content");
     const ayetlerJsonStr = JSON.stringify(ayetleriAyikla(finalAyetlerNotu));
 
     const updateData: any = {
       rawContent: content,
       govde,
+      baslik: guncellenenBaslik,
+      dosyaAdi: `${guncellenenBaslik}.md`,
       konu: etiketDegeri(header, "Konu"),
       ozet: etiketDegeri(header, "Kısa Özet"),
       kavramlarRaw: etiketDegeri(header, "Kavramlar"),
@@ -124,15 +138,22 @@ export async function PUT(req: NextRequest) {
       updatedAt: new Date(),
     };
 
-    if (baslik) {
-      updateData.baslik = baslik;
-      updateData.dosyaAdi = `${baslik}.md`;
-    }
-
     await prisma.sohbetRecord.update({
       where: { slug },
       data: updateData,
     });
+
+    // Önbellekleri temizle ve statik sayfaları yeniden oluştur
+    clearContentCache();
+    try {
+      revalidatePath(`/sohbet/${slug}`);
+      revalidatePath("/sohbetler");
+      revalidatePath("/kavramlar");
+      revalidatePath("/ayetler");
+      revalidatePath("/");
+    } catch (e) {
+      console.error("Revalidate hatası:", e);
+    }
 
     return NextResponse.json({
       success: true,
@@ -170,6 +191,18 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.sohbetRecord.delete({ where: { slug } });
+
+    // Önbellekleri temizle
+    clearContentCache();
+    try {
+      revalidatePath(`/sohbet/${slug}`);
+      revalidatePath("/sohbetler");
+      revalidatePath("/kavramlar");
+      revalidatePath("/ayetler");
+      revalidatePath("/");
+    } catch (e) {
+      console.error("Revalidate hatası:", e);
+    }
 
     return NextResponse.json({
       success: true,

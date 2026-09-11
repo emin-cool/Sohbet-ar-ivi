@@ -4,6 +4,10 @@ import type { AyetRef, Bolum, Kavram, Sohbet, SohbetMeta } from './types';
 // In-memory cache variable for development reloads or production module caching
 let cachedSohbetler: Sohbet[] | null = null;
 
+export function clearContentCache() {
+    cachedSohbetler = null;
+}
+
 /**
  * Normalizes a Turkish label for matching aliases and finding canonical Kavram names.
  */
@@ -98,7 +102,12 @@ async function getAllData(): Promise<{ sohbetler: Sohbet[] }> {
         }
         
         let bolumler: Bolum[] = [];
-        try { bolumler = JSON.parse(row.bolumlerJson || '[]'); } catch(e) {}
+        try {
+            const rawBolumler = JSON.parse(row.bolumlerJson || '[]');
+            bolumler = Array.isArray(rawBolumler)
+                ? rawBolumler.map((b: any) => (typeof b === 'string' ? { baslik: b } : b))
+                : [];
+        } catch(e) {}
 
         const rowKavramlarRaw = row.kavramlarRaw 
             ? row.kavramlarRaw.split(',').map((s: string) => s.trim()).filter(Boolean) 

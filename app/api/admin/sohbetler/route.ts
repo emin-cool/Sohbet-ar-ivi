@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+import { clearContentCache } from "@/lib/content";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -36,6 +38,17 @@ export async function DELETE() {
 
   try {
     const result = await prisma.sohbetRecord.deleteMany({});
+    
+    clearContentCache();
+    try {
+      revalidatePath("/sohbetler");
+      revalidatePath("/ayetler");
+      revalidatePath("/kavramlar");
+      revalidatePath("/");
+    } catch (e) {
+      console.error("Revalidate hatası:", e);
+    }
+
     return NextResponse.json({
       success: true,
       message: `${result.count} sohbet silindi.`,

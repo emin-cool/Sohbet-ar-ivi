@@ -827,16 +827,25 @@ function EditorModal({
   const [ayetNo, setAyetNo] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/admin/sohbetler/detay?slug=${slug}`)
+    fetch(`/api/admin/sohbetler/detay?slug=${encodeURIComponent(slug)}`)
       .then((r) => r.json())
       .then((d) => {
-        setContent(d.content || "");
-        setBaslik(d.baslik || "");
-        let parsedAyetler = [];
-        try { parsedAyetler = JSON.parse(d.ayetlerJson || "[]"); } catch (e) {}
-        setAyetler(parsedAyetler);
+        if (d.error) {
+          setError(d.error);
+        } else {
+          setContent(d.content || "");
+          setBaslik(d.baslik || "");
+          let parsedAyetler = [];
+          try { parsedAyetler = JSON.parse(d.ayetlerJson || "[]"); } catch (e) {}
+          setAyetler(parsedAyetler);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message || "Sohbet verisi yüklenemedi.");
         setLoading(false);
       });
   }, [slug]);
@@ -855,14 +864,24 @@ function EditorModal({
 
   const handleSave = async () => {
     setSaving(true);
+    setError("");
     const ayetlerNotu = ayetler.map(a => `${a.sure} Suresi ${a.sureNo}:${a.ayet || '1'}`).join(", ");
-    await fetch(`/api/admin/sohbetler/detay?slug=${slug}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content, baslik, ayetlerNotu }),
-    });
-    setSaving(false);
-    onClose();
+    try {
+      const res = await fetch(`/api/admin/sohbetler/detay?slug=${encodeURIComponent(slug)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, baslik, ayetlerNotu }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Kaydedilemedi");
+      }
+      setSaving(false);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Kaydetme sırasında bir hata oluştu.");
+      setSaving(false);
+    }
   };
 
   return (
@@ -885,6 +904,13 @@ function EditorModal({
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg flex justify-between items-center">
+          <span>Hata: {error}</span>
+          <button onClick={() => setError("")} className="text-red-500 hover:text-red-800 text-xs font-bold ml-2">✕</button>
+        </div>
+      )}
 
       {loading ? (
         <p className="text-center text-muted py-8">Yükleniyor...</p>
