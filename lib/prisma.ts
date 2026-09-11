@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
-import Database from "better-sqlite3";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import path from "path";
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
@@ -10,9 +9,20 @@ let prisma: PrismaClient;
 if (globalForPrisma.prisma) {
   prisma = globalForPrisma.prisma;
 } else {
-  const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
-  const adapter = new PrismaBetterSqlite3({ url: dbUrl });
-  prisma = new PrismaClient({ adapter });
+  let dbUrl = process.env.DATABASE_URL || "file:./dev.db";
+  
+  // Vercel'de Serverless function'ın dosyayı bulabilmesi için absolute path kullan
+  if (process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV) {
+    dbUrl = `file:${path.join(process.cwd(), "dev.db")}`;
+  }
+
+  prisma = new PrismaClient({
+    datasources: {
+      db: {
+        url: dbUrl,
+      },
+    },
+  });
 }
 
 export { prisma };
